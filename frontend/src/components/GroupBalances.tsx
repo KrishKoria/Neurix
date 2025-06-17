@@ -1,26 +1,46 @@
-import React, { useState } from "react";
-import {
-  BarChart3,
-  CheckCircle,
-  AlertCircle,
-  Search,
-  Info,
-} from "lucide-react";
-import { apiService, type Balance } from "../lib/api";
+import React, { useState, useEffect } from "react";
+import { BarChart3, CheckCircle, AlertCircle } from "lucide-react";
+import { apiService, type Balance, type Group } from "../lib/api";
 
 const GroupBalances: React.FC = () => {
-  const [groupId, setGroupId] = useState("");
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [balances, setBalances] = useState<Balance[]>([]);
-  const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  const handleSearch = async () => {
-    if (!groupId) {
-      setMessage({ type: "error", text: "Please enter a group ID" });
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const groupsData = await apiService.getAllGroups();
+        setGroups(groupsData);
+
+        // Check if groupId is in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const groupIdFromUrl = urlParams.get("groupId");
+        if (groupIdFromUrl) {
+          setSelectedGroupId(groupIdFromUrl);
+          await handleSearch(groupIdFromUrl);
+        }
+      } catch (error) {
+        setMessage({ type: "error", text: "Failed to load groups" });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleSearch = async (groupId?: string) => {
+    const targetGroupId = groupId || selectedGroupId;
+
+    if (!targetGroupId) {
+      setMessage({ type: "error", text: "Please select a group" });
       return;
     }
 
@@ -28,17 +48,10 @@ const GroupBalances: React.FC = () => {
     setMessage(null);
 
     try {
-      const balancesData = await apiService.getGroupBalances(parseInt(groupId));
+      const balancesData = await apiService.getGroupBalances(
+        parseInt(targetGroupId)
+      );
       setBalances(balancesData);
-
-      // Get group details for the name
-      try {
-        const group = await apiService.getGroup(parseInt(groupId));
-        setGroupName(group.name);
-      } catch (error) {
-        setGroupName(`Group ${groupId}`);
-      }
-
       if (balancesData.length === 0) {
         setMessage({ type: "error", text: "No balances found for this group" });
       }
@@ -48,7 +61,6 @@ const GroupBalances: React.FC = () => {
         text: error.response?.data?.detail || "Failed to load group balances",
       });
       setBalances([]);
-      setGroupName("");
     } finally {
       setLoading(false);
     }
@@ -77,6 +89,38 @@ const GroupBalances: React.FC = () => {
     }
   };
 
+  const selectedGroup = groups.find((g) => g.id === parseInt(selectedGroupId));
+
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white shadow rounded-lg p-6 text-center">
+          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Groups Available
+          </h3>
+          <p className="text-gray-500 mb-4">
+            You need to create a group first before viewing balances.
+          </p>
+          <a
+            href="/create-group"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Create Your First Group
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white shadow rounded-lg">
@@ -88,48 +132,55 @@ const GroupBalances: React.FC = () => {
             </h3>
           </div>
 
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-start">
-              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
-              <div>
-                <h4 className="text-sm font-medium text-blue-900 mb-1">
-                  How to find Group IDs:
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Check the Dashboard to see all users and their IDs</li>
-                  <li>• Group IDs are shown when you create a new group</li>
-                  <li>• Try common IDs like 1, 2, 3, etc.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
           <div className="mb-6">
             <div className="flex space-x-3">
               <div className="flex-1">
-                <label htmlFor="groupId" className="sr-only">
-                  Group ID
+                <label htmlFor="groupSelect" className="sr-only">
+                  Select Group
                 </label>
-                <input
-                  type="number"
-                  id="groupId"
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
+                <select
+                  id="groupSelect"
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
                   className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Enter group ID (e.g., 1, 2, 3...)"
                   disabled={loading}
-                />
+                >
+                  <option value="">Select a group</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name} (ID: {group.id}) - {group.users?.length || 0}{" "}
+                      members
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
-                onClick={handleSearch}
-                disabled={loading}
+                onClick={() => handleSearch()}
+                disabled={loading || !selectedGroupId}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                <Search className="h-4 w-4 mr-2" />
                 {loading ? "Loading..." : "Get Balances"}
               </button>
             </div>
           </div>
+
+          {selectedGroup && (
+            <div className="mb-6 bg-gray-50 rounded-md p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">
+                Selected Group: {selectedGroup.name}
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedGroup.users?.map((user) => (
+                  <span
+                    key={user.id}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                  >
+                    {user.name}
+                  </span>
+                )) || <span className="text-sm text-gray-500">No members</span>}
+              </div>
+            </div>
+          )}
 
           {message && (
             <div
@@ -156,15 +207,9 @@ const GroupBalances: React.FC = () => {
 
           {balances.length > 0 && (
             <div>
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <h4 className="text-lg font-medium text-gray-900 mb-2">
-                  📊 Balance Summary for {groupName} (Group ID: {groupId})
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Below are the current balances for all members in this group.
-                </p>
-              </div>
-
+              <h4 className="text-lg font-medium text-gray-900 mb-4">
+                Balance Summary for {selectedGroup?.name}
+              </h4>
               <div className="grid gap-4">
                 {balances.map((balance) => {
                   const { text, color, bgColor } = formatBalance(
@@ -187,9 +232,6 @@ const GroupBalances: React.FC = () => {
                           <div>
                             <p className="text-lg font-medium text-gray-900">
                               {balance.user_name}
-                              <span className="text-sm text-gray-500 ml-2">
-                                (ID: {balance.user_id})
-                              </span>
                             </p>
                             <p className={`text-sm ${color}`}>{text}</p>
                           </div>

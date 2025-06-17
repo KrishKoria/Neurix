@@ -1,20 +1,50 @@
-import React, { useState } from "react";
-import { User, CheckCircle, AlertCircle, Search, Info } from "lucide-react";
-import { apiService, type UserBalance } from "../lib/api";
+import React, { useState, useEffect } from "react";
+import { User, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  apiService,
+  type UserBalance,
+  type User as UserType,
+} from "../lib/api";
 
 const UserBalances: React.FC = () => {
-  const [userId, setUserId] = useState("");
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [balances, setBalances] = useState<UserBalance[]>([]);
-  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  const handleSearch = async () => {
-    if (!userId) {
-      setMessage({ type: "error", text: "Please enter a user ID" });
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const usersData = await apiService.getUsers();
+        setUsers(usersData);
+
+        // Check if userId is in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const userIdFromUrl = urlParams.get("userId");
+        if (userIdFromUrl) {
+          setSelectedUserId(userIdFromUrl);
+          await handleSearch(userIdFromUrl);
+        }
+      } catch (error) {
+        setMessage({ type: "error", text: "Failed to load users" });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleSearch = async (userId?: string) => {
+    const targetUserId = userId || selectedUserId;
+
+    if (!targetUserId) {
+      setMessage({ type: "error", text: "Please select a user" });
       return;
     }
 
@@ -22,18 +52,10 @@ const UserBalances: React.FC = () => {
     setMessage(null);
 
     try {
-      const balancesData = await apiService.getUserBalances(parseInt(userId));
+      const balancesData = await apiService.getUserBalances(
+        parseInt(targetUserId)
+      );
       setBalances(balancesData);
-
-      // Get user details for the name
-      try {
-        const users = await apiService.getUsers();
-        const user = users.find((u) => u.id === parseInt(userId));
-        setUserName(user ? user.name : `User ${userId}`);
-      } catch (error) {
-        setUserName(`User ${userId}`);
-      }
-
       if (balancesData.length === 0) {
         setMessage({ type: "error", text: "No balances found for this user" });
       }
@@ -43,7 +65,6 @@ const UserBalances: React.FC = () => {
         text: error.response?.data?.detail || "Failed to load user balances",
       });
       setBalances([]);
-      setUserName("");
     } finally {
       setLoading(false);
     }
@@ -79,6 +100,38 @@ const UserBalances: React.FC = () => {
     return balances.reduce((sum, balance) => sum + balance.balance, 0);
   };
 
+  const selectedUser = users.find((u) => u.id === parseInt(selectedUserId));
+
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white shadow rounded-lg p-6 text-center">
+          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Users Available
+          </h3>
+          <p className="text-gray-500 mb-4">
+            You need to create users first before viewing balances.
+          </p>
+          <a
+            href="/create-user"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Create Your First User
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white shadow rounded-lg">
@@ -90,48 +143,45 @@ const UserBalances: React.FC = () => {
             </h3>
           </div>
 
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-start">
-              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
-              <div>
-                <h4 className="text-sm font-medium text-blue-900 mb-1">
-                  How to find User IDs:
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Check the Dashboard to see all users and their IDs</li>
-                  <li>• User IDs are shown when you create a new user</li>
-                  <li>• Try common IDs like 1, 2, 3, etc.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
           <div className="mb-6">
             <div className="flex space-x-3">
               <div className="flex-1">
-                <label htmlFor="userId" className="sr-only">
-                  User ID
+                <label htmlFor="userSelect" className="sr-only">
+                  Select User
                 </label>
-                <input
-                  type="number"
-                  id="userId"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
+                <select
+                  id="userSelect"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
                   className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Enter user ID (e.g., 1, 2, 3...)"
                   disabled={loading}
-                />
+                >
+                  <option value="">Select a user</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} (ID: {user.id}) - {user.email}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
-                onClick={handleSearch}
-                disabled={loading}
+                onClick={() => handleSearch()}
+                disabled={loading || !selectedUserId}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                <Search className="h-4 w-4 mr-2" />
                 {loading ? "Loading..." : "Get Balances"}
               </button>
             </div>
           </div>
+
+          {selectedUser && (
+            <div className="mb-6 bg-gray-50 rounded-md p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">
+                Selected User: {selectedUser.name}
+              </h4>
+              <p className="text-sm text-gray-600">{selectedUser.email}</p>
+            </div>
+          )}
 
           {message && (
             <div
@@ -161,7 +211,7 @@ const UserBalances: React.FC = () => {
               <div className="mb-6">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
                   <h4 className="text-xl font-semibold mb-2">
-                    💰 Overall Balance for {userName} (User ID: {userId})
+                    Overall Balance for {selectedUser?.name}
                   </h4>
                   <div className="flex items-center justify-between">
                     <span className="text-blue-100">
@@ -206,9 +256,6 @@ const UserBalances: React.FC = () => {
                           <div>
                             <p className="text-lg font-medium text-gray-900">
                               {balance.group_name}
-                              <span className="text-sm text-gray-500 ml-2">
-                                (ID: {balance.group_id})
-                              </span>
                             </p>
                             <p className={`text-sm ${color}`}>{label}</p>
                           </div>

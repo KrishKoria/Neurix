@@ -105,6 +105,15 @@ export const apiService = {
     const response = await api.get(`/groups/${groupId}`);
     return response.data;
   },
+  async getAllGroups(): Promise<Group[]> {
+    try {
+      const response = await api.get("/groups");
+      return response.data;
+    } catch (error) {
+      console.warn("Get all groups endpoint not available yet");
+      return [];
+    }
+  },
 
   // Expenses
   async createExpense(

@@ -4,21 +4,27 @@ import {
   UserPlus,
   Receipt,
   TrendingUp,
+  Eye,
   Copy,
   Check,
 } from "lucide-react";
-import { apiService, type User } from "../lib/api";
+import { apiService, type User, type Group } from "../lib/api";
 
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const usersData = await apiService.getUsers();
+        const [usersData, groupsData] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getAllGroups(),
+        ]);
         setUsers(usersData);
+        setGroups(groupsData);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -29,13 +35,13 @@ const Dashboard: React.FC = () => {
     loadData();
   }, []);
 
-  const copyToClipboard = async (id: number) => {
+  const copyToClipboard = async (text: string, type: string) => {
     try {
-      await navigator.clipboard.writeText(id.toString());
-      setCopiedId(id);
+      await navigator.clipboard.writeText(text);
+      setCopiedId(`${type}-${text}`);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy ID:", err);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
     }
   };
 
@@ -59,6 +65,7 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
@@ -91,7 +98,9 @@ const Dashboard: React.FC = () => {
                     <dt className="text-sm font-medium text-gray-500 truncate">
                       Active Groups
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">-</dd>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {groups.length}
+                    </dd>
                   </dl>
                 </div>
               </div>
@@ -109,7 +118,14 @@ const Dashboard: React.FC = () => {
                     <dt className="text-sm font-medium text-gray-500 truncate">
                       Total Expenses
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">-</dd>
+                    <dd className="text-lg font-medium text-gray-900">
+                      {groups
+                        .reduce(
+                          (sum, group) => sum + (group.total_expenses || 0),
+                          0
+                        )
+                        .toFixed(0)}
+                    </dd>
                   </dl>
                 </div>
               </div>
@@ -127,7 +143,15 @@ const Dashboard: React.FC = () => {
                     <dt className="text-sm font-medium text-gray-500 truncate">
                       Total Amount
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">$0.00</dd>
+                    <dd className="text-lg font-medium text-gray-900">
+                      $
+                      {groups
+                        .reduce(
+                          (sum, group) => sum + (group.total_expenses || 0),
+                          0
+                        )
+                        .toFixed(2)}
+                    </dd>
                   </dl>
                 </div>
               </div>
@@ -135,18 +159,19 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg">
+        {/* Users Section */}
+        <div className="bg-white shadow rounded-lg mb-8">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              All Users
+              Users Directory
             </h3>
             {users.length === 0 ? (
               <p className="text-gray-500">
                 No users created yet. Start by creating some users!
               </p>
             ) : (
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-300">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -159,55 +184,203 @@ const Dashboard: React.FC = () => {
                         Email
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Groups
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {users.map((user) => {
+                      const userGroups = groups.filter((group) =>
+                        group.users?.some(
+                          (groupUser) => groupUser.id === user.id
+                        )
+                      );
+
+                      return (
+                        <tr key={user.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <div className="flex items-center space-x-2">
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                ID: {user.id}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  copyToClipboard(user.id.toString(), "user")
+                                }
+                                className="text-gray-400 hover:text-gray-600"
+                                title="Copy User ID"
+                              >
+                                {copiedId === `user-${user.id}` ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                                <span className="text-sm font-medium text-white">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {user.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1">
+                              {userGroups.length > 0 ? (
+                                userGroups.map((group) => (
+                                  <span
+                                    key={group.id}
+                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                  >
+                                    {group.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400">
+                                  No groups
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() =>
+                                window.open(
+                                  `/user-balances?userId=${user.id}`,
+                                  "_blank"
+                                )
+                              }
+                              className="text-blue-600 hover:text-blue-900 flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Balances
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Groups Section */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Groups Directory
+            </h3>
+            {groups.length === 0 ? (
+              <p className="text-gray-500">
+                No groups created yet. Create a group to start splitting
+                expenses!
+              </p>
+            ) : (
+              <div className="grid gap-4">
+                {groups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                          <span className="text-sm font-medium text-white">
+                            {group.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">
+                            {group.name}
+                          </h4>
                           <div className="flex items-center space-x-2">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
-                              {user.id}
+                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-semibold">
+                              ID: {group.id}
                             </span>
                             <button
-                              onClick={() => copyToClipboard(user.id)}
+                              onClick={() =>
+                                copyToClipboard(group.id.toString(), "group")
+                              }
                               className="text-gray-400 hover:text-gray-600"
-                              title="Copy User ID"
+                              title="Copy Group ID"
                             >
-                              {copiedId === user.id ? (
+                              {copiedId === `group-${group.id}` ? (
                                 <Check className="h-4 w-4 text-green-500" />
                               ) : (
                                 <Copy className="h-4 w-4" />
                               )}
                             </button>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
-                              <span className="text-sm font-medium text-white">
-                                {user.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <span className="text-sm font-medium text-gray-900">
-                              {user.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            Use ID {user.id} for forms
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Total Expenses</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          ${(group.total_expenses || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Members ({group.users?.length || 0}):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.users?.map((user) => (
+                          <span
+                            key={user.id}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {user.name}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        )) || (
+                          <span className="text-xs text-gray-400">
+                            No members
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() =>
+                          window.open(
+                            `/add-expense?groupId=${group.id}`,
+                            "_blank"
+                          )
+                        }
+                        className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                      >
+                        Add Expense
+                      </button>
+                      <button
+                        onClick={() =>
+                          window.open(
+                            `/group-balances?groupId=${group.id}`,
+                            "_blank"
+                          )
+                        }
+                        className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+                      >
+                        View Balances
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

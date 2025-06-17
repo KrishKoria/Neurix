@@ -216,6 +216,28 @@ def get_users(db: Session = Depends(get_db)):
         logger.error(f"Error getting users: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+@app.get("/groups", response_model=List[GroupResponse])
+def get_all_groups(db: Session = Depends(get_db)):
+    """Get all groups"""
+    try:
+        groups = db.query(Group).all()
+        response = []
+        
+        for group in groups:
+            total_expenses = sum(expense.amount for expense in group.expenses)
+            response.append(GroupResponse(
+                id=group.id,
+                name=group.name,
+                users=[UserResponse.from_orm(user) for user in group.users],
+                total_expenses=total_expenses
+            ))
+        
+        logger.info(f"Retrieved {len(groups)} groups")
+        return response
+    except Exception as e:
+        logger.error(f"Error getting groups: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 @app.post("/groups", response_model=GroupResponse)
 def create_group(group: GroupCreate, db: Session = Depends(get_db)):
     """Create a new group with specified users"""

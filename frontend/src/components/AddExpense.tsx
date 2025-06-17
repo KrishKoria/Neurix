@@ -9,8 +9,9 @@ import {
 
 const AddExpense: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [groupId, setGroupId] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [paidBy, setPaidBy] = useState("");
@@ -19,51 +20,68 @@ const AddExpense: React.FC = () => {
     [userId: number]: number;
   }>({});
   const [loading, setLoading] = useState(false);
-  const [loadingGroup, setLoadingGroup] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
-        const usersData = await apiService.getUsers();
+        const [usersData, groupsData] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getAllGroups(),
+        ]);
         setUsers(usersData);
+        setGroups(groupsData);
+
+        // Check if groupId is in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const groupIdFromUrl = urlParams.get("groupId");
+        if (groupIdFromUrl) {
+          setSelectedGroupId(groupIdFromUrl);
+          const group = groupsData.find(
+            (g) => g.id === parseInt(groupIdFromUrl)
+          );
+          if (group) {
+            setSelectedGroup(group);
+            initializePercentageSplits(group);
+          }
+        }
       } catch (error) {
-        console.error("Failed to load users:", error);
+        setMessage({ type: "error", text: "Failed to load data" });
+      } finally {
+        setLoadingData(false);
       }
     };
 
-    loadUsers();
+    loadData();
   }, []);
 
-  const handleGroupIdChange = async (value: string) => {
-    setGroupId(value);
-    setSelectedGroup(null);
-    setPaidBy("");
-    setPercentageSplits({});
+  const initializePercentageSplits = (group: Group) => {
+    const equalPercentage = 100 / (group.users?.length || 1);
+    const initialSplits: { [userId: number]: number } = {};
+    group.users?.forEach((user) => {
+      initialSplits[user.id] = equalPercentage;
+    });
+    setPercentageSplits(initialSplits);
+  };
 
-    if (value) {
-      setLoadingGroup(true);
-      try {
-        const group = await apiService.getGroup(parseInt(value));
+  const handleGroupChange = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setPaidBy("");
+    setMessage(null);
+
+    if (groupId) {
+      const group = groups.find((g) => g.id === parseInt(groupId));
+      if (group) {
         setSelectedGroup(group);
-        // Initialize percentage splits with equal distribution
-        const equalPercentage = 100 / group.users.length;
-        const initialSplits: { [userId: number]: number } = {};
-        group.users.forEach((user) => {
-          initialSplits[user.id] = equalPercentage;
-        });
-        setPercentageSplits(initialSplits);
-      } catch (error: any) {
-        setMessage({
-          type: "error",
-          text: error.response?.data?.detail || "Failed to load group",
-        });
-      } finally {
-        setLoadingGroup(false);
+        initializePercentageSplits(group);
       }
+    } else {
+      setSelectedGroup(null);
+      setPercentageSplits({});
     }
   };
 
@@ -120,10 +138,11 @@ const AddExpense: React.FC = () => {
       };
 
       if (splitType === "percentage") {
-        expense.splits = selectedGroup.users.map((user) => ({
-          user_id: user.id,
-          percentage: percentageSplits[user.id] || 0,
-        }));
+        expense.splits =
+          selectedGroup.users?.map((user) => ({
+            user_id: user.id,
+            percentage: percentageSplits[user.id] || 0,
+          })) || [];
       }
 
       await apiService.createExpense(selectedGroup.id, expense);
@@ -132,13 +151,9 @@ const AddExpense: React.FC = () => {
       setAmount("");
       setPaidBy("");
       setSplitType("equal");
-      // Reset percentage splits
-      const equalPercentage = 100 / selectedGroup.users.length;
-      const resetSplits: { [userId: number]: number } = {};
-      selectedGroup.users.forEach((user) => {
-        resetSplits[user.id] = equalPercentage;
-      });
-      setPercentageSplits(resetSplits);
+      if (selectedGroup) {
+        initializePercentageSplits(selectedGroup);
+      }
     } catch (error: any) {
       setMessage({
         type: "error",
@@ -149,6 +164,36 @@ const AddExpense: React.FC = () => {
     }
   };
 
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white shadow rounded-lg p-6 text-center">
+          <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Groups Available
+          </h3>
+          <p className="text-gray-500 mb-4">
+            You need to create a group first before adding expenses.
+          </p>
+          <a
+            href="/create-group"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Create Your First Group
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white shadow rounded-lg">
@@ -158,20 +203,6 @@ const AddExpense: React.FC = () => {
             <h3 className="text-lg leading-6 font-medium text-gray-900">
               Add New Expense
             </h3>
-          </div>
-
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">
-              💡 Need Group ID?
-            </h4>
-            <p className="text-sm text-blue-700 mb-2">
-              Don't know your Group ID? Check the Dashboard or Create Group page
-              to see all group IDs.
-            </p>
-            <p className="text-xs text-blue-600">
-              Group IDs are shown when you create a group or you can find them
-              on the Dashboard.
-            </p>
           </div>
 
           {message && (
@@ -200,60 +231,44 @@ const AddExpense: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
-                htmlFor="groupId"
+                htmlFor="group"
                 className="block text-sm font-medium text-gray-700"
               >
-                Group ID <span className="text-red-500">*</span>
+                Select Group
               </label>
-              <div className="mt-1 relative">
-                <input
-                  type="number"
-                  id="groupId"
-                  value={groupId}
-                  onChange={(e) => handleGroupIdChange(e.target.value)}
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border pr-10"
-                  placeholder="Enter group ID (e.g., 1, 2, 3...)"
-                  disabled={loading}
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  {loadingGroup && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                  )}
-                </div>
-              </div>
-              {loadingGroup && (
-                <p className="mt-1 text-sm text-gray-500">Loading group...</p>
-              )}
+              <select
+                id="group"
+                value={selectedGroupId}
+                onChange={(e) => handleGroupChange(e.target.value)}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
+                disabled={loading}
+              >
+                <option value="">Choose a group</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} (ID: {group.id}) - {group.users?.length || 0}{" "}
+                    members
+                  </option>
+                ))}
+              </select>
             </div>
 
             {selectedGroup && (
-              <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                <div className="flex items-center mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  <h4 className="text-sm font-medium text-green-900">
-                    Group Found!
-                  </h4>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-green-800">
-                    <strong>Group:</strong> {selectedGroup.name} (ID:{" "}
-                    {selectedGroup.id})
-                  </p>
-                  <div>
-                    <p className="text-sm text-green-800 mb-1">
-                      <strong>Members:</strong>
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedGroup.users.map((user) => (
-                        <span
-                          key={user.id}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                        >
-                          {user.name} (ID: {user.id})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+              <div className="bg-gray-50 rounded-md p-3">
+                <h4 className="text-sm font-medium text-gray-900 mb-2">
+                  Group: {selectedGroup.name}
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedGroup.users?.map((user) => (
+                    <span
+                      key={user.id}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {user.name} (ID: {user.id})
+                    </span>
+                  )) || (
+                    <span className="text-sm text-gray-500">No members</span>
+                  )}
                 </div>
               </div>
             )}
@@ -263,7 +278,7 @@ const AddExpense: React.FC = () => {
                 htmlFor="description"
                 className="block text-sm font-medium text-gray-700"
               >
-                Description <span className="text-red-500">*</span>
+                Description
               </label>
               <input
                 type="text"
@@ -271,7 +286,7 @@ const AddExpense: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="What was this expense for? (e.g., Dinner, Groceries, Movie tickets)"
+                placeholder="What was this expense for?"
                 disabled={loading}
               />
             </div>
@@ -281,7 +296,7 @@ const AddExpense: React.FC = () => {
                 htmlFor="amount"
                 className="block text-sm font-medium text-gray-700"
               >
-                Amount ($) <span className="text-red-500">*</span>
+                Amount ($)
               </label>
               <input
                 type="number"
@@ -295,13 +310,13 @@ const AddExpense: React.FC = () => {
               />
             </div>
 
-            {selectedGroup && (
+            {selectedGroup && selectedGroup.users && (
               <div>
                 <label
                   htmlFor="paidBy"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Paid By <span className="text-red-500">*</span>
+                  Paid By
                 </label>
                 <select
                   id="paidBy"
@@ -335,7 +350,7 @@ const AddExpense: React.FC = () => {
                     disabled={loading}
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Equal split (everyone pays the same amount)
+                    Equal split
                   </span>
                 </label>
                 <label className="flex items-center">
@@ -350,54 +365,54 @@ const AddExpense: React.FC = () => {
                     disabled={loading}
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Percentage split (custom percentages for each person)
+                    Percentage split
                   </span>
                 </label>
               </div>
             </div>
 
-            {splitType === "percentage" && selectedGroup && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Percentage Distribution (Total:{" "}
-                  {getTotalPercentage().toFixed(1)}%)
-                  {getTotalPercentage() !== 100 && (
-                    <span className="text-red-600 ml-2">
-                      ⚠️ Must equal 100%
-                    </span>
-                  )}
-                </label>
-                <div className="space-y-3">
-                  {selectedGroup.users.map((user) => (
-                    <div key={user.id} className="flex items-center space-x-3">
-                      <div className="flex-1">
-                        <span className="text-sm text-gray-700">
-                          {user.name} (ID: {user.id})
-                        </span>
+            {splitType === "percentage" &&
+              selectedGroup &&
+              selectedGroup.users && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Percentage Distribution (Total:{" "}
+                    {getTotalPercentage().toFixed(1)}%)
+                  </label>
+                  <div className="space-y-3">
+                    {selectedGroup.users.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center space-x-3"
+                      >
+                        <div className="flex-1">
+                          <span className="text-sm text-gray-700">
+                            {user.name} (ID: {user.id})
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            value={percentageSplits[user.id] || 0}
+                            onChange={(e) =>
+                              handlePercentageChange(
+                                user.id,
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-2 py-1 border"
+                            disabled={loading}
+                          />
+                          <span className="text-sm text-gray-500">%</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={percentageSplits[user.id] || 0}
-                          onChange={(e) =>
-                            handlePercentageChange(
-                              user.id,
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-2 py-1 border"
-                          disabled={loading}
-                        />
-                        <span className="text-sm text-gray-500">%</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <button
               type="submit"
