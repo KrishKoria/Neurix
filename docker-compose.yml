@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: splitwise_postgres
     environment:
       POSTGRES_USER: postgres
@@ -41,6 +41,24 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: splitwise_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - splitwise_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     restart: unless-stopped
 
 volumes:
