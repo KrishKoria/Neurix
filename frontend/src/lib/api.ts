@@ -1,6 +1,16 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const getApiUrl = () => {
+  if (typeof window !== "undefined") {
+    return import.meta.env.VITE_API_URL || "http://localhost:8000";
+  }
+
+  return import.meta.env.VITE_API_URL || "http://backend:8000";
+};
+
+const API_BASE_URL = getApiUrl();
+
+console.log("API Base URL:", API_BASE_URL); // For debugging
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +18,30 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+api.interceptors.request.use(
+  (config) => {
+    console.log("Making request to:", config.baseURL! + config.url);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    console.error("API Error:", error.message);
+    if (error.response) {
+      console.error("Response status:", error.response.status);
+      console.error("Response data:", error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Types
 export interface User {

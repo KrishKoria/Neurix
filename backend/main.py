@@ -8,6 +8,7 @@ from sqlalchemy.sql import func
 import os
 import time
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -66,6 +67,14 @@ app = FastAPI(
     title="Splitwise API", 
     version="1.0.0", 
     description="A simplified expense splitting application"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Dependency to get database session
