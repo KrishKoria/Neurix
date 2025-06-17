@@ -1,10 +1,17 @@
 import React, { useState } from "react";
-import { BarChart3, CheckCircle, AlertCircle, Search } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle,
+  AlertCircle,
+  Search,
+  Info,
+} from "lucide-react";
 import { apiService, type Balance } from "../lib/api";
 
 const GroupBalances: React.FC = () => {
   const [groupId, setGroupId] = useState("");
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -23,6 +30,15 @@ const GroupBalances: React.FC = () => {
     try {
       const balancesData = await apiService.getGroupBalances(parseInt(groupId));
       setBalances(balancesData);
+
+      // Get group details for the name
+      try {
+        const group = await apiService.getGroup(parseInt(groupId));
+        setGroupName(group.name);
+      } catch (error) {
+        setGroupName(`Group ${groupId}`);
+      }
+
       if (balancesData.length === 0) {
         setMessage({ type: "error", text: "No balances found for this group" });
       }
@@ -32,6 +48,7 @@ const GroupBalances: React.FC = () => {
         text: error.response?.data?.detail || "Failed to load group balances",
       });
       setBalances([]);
+      setGroupName("");
     } finally {
       setLoading(false);
     }
@@ -41,13 +58,13 @@ const GroupBalances: React.FC = () => {
     const absBalance = Math.abs(balance);
     if (balance > 0) {
       return {
-        text: `owes $${absBalance.toFixed(2)}`,
+        text: `is owed $${absBalance.toFixed(2)}`,
         color: "text-green-600",
         bgColor: "bg-green-50",
       };
     } else if (balance < 0) {
       return {
-        text: `is owed $${absBalance.toFixed(2)}`,
+        text: `owes $${absBalance.toFixed(2)}`,
         color: "text-red-600",
         bgColor: "bg-red-50",
       };
@@ -71,6 +88,22 @@ const GroupBalances: React.FC = () => {
             </h3>
           </div>
 
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 mb-1">
+                  How to find Group IDs:
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Check the Dashboard to see all users and their IDs</li>
+                  <li>• Group IDs are shown when you create a new group</li>
+                  <li>• Try common IDs like 1, 2, 3, etc.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
             <div className="flex space-x-3">
               <div className="flex-1">
@@ -83,7 +116,7 @@ const GroupBalances: React.FC = () => {
                   value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
                   className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Enter group ID"
+                  placeholder="Enter group ID (e.g., 1, 2, 3...)"
                   disabled={loading}
                 />
               </div>
@@ -123,9 +156,15 @@ const GroupBalances: React.FC = () => {
 
           {balances.length > 0 && (
             <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-4">
-                Balance Summary for Group {groupId}
-              </h4>
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  📊 Balance Summary for {groupName} (Group ID: {groupId})
+                </h4>
+                <p className="text-sm text-gray-600">
+                  Below are the current balances for all members in this group.
+                </p>
+              </div>
+
               <div className="grid gap-4">
                 {balances.map((balance) => {
                   const { text, color, bgColor } = formatBalance(
@@ -148,6 +187,9 @@ const GroupBalances: React.FC = () => {
                           <div>
                             <p className="text-lg font-medium text-gray-900">
                               {balance.user_name}
+                              <span className="text-sm text-gray-500 ml-2">
+                                (ID: {balance.user_id})
+                              </span>
                             </p>
                             <p className={`text-sm ${color}`}>{text}</p>
                           </div>

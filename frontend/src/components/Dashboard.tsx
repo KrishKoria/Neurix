@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Users, UserPlus, Receipt, TrendingUp } from "lucide-react";
-import { apiService, type Group, type User } from "../lib/api";
+import {
+  Users,
+  UserPlus,
+  Receipt,
+  TrendingUp,
+  Copy,
+  Check,
+} from "lucide-react";
+import { apiService, type User } from "../lib/api";
 
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const usersData = await apiService.getUsers();
         setUsers(usersData);
-
-        // For now, we'll just show that groups exist but we'd need to add a get all groups endpoint
-        setGroups([]);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -24,6 +28,16 @@ const Dashboard: React.FC = () => {
 
     loadData();
   }, []);
+
+  const copyToClipboard = async (id: number) => {
+    try {
+      await navigator.clipboard.writeText(id.toString());
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy ID:", err);
+    }
+  };
 
   if (loading) {
     return (
@@ -77,9 +91,7 @@ const Dashboard: React.FC = () => {
                     <dt className="text-sm font-medium text-gray-500 truncate">
                       Active Groups
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {groups.length}
-                    </dd>
+                    <dd className="text-lg font-medium text-gray-900">-</dd>
                   </dl>
                 </div>
               </div>
@@ -126,36 +138,76 @@ const Dashboard: React.FC = () => {
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Recent Users
+              All Users
             </h3>
             {users.length === 0 ? (
               <p className="text-gray-500">
                 No users created yet. Start by creating some users!
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {users.slice(0, 6).map((user) => (
-                  <div
-                    key={user.id}
-                    className="relative rounded-lg border border-gray-300 bg-white px-4 py-3"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                          <span className="text-sm font-medium text-white">
-                            {user.name.charAt(0).toUpperCase()}
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
+                              {user.id}
+                            </span>
+                            <button
+                              onClick={() => copyToClipboard(user.id)}
+                              className="text-gray-400 hover:text-gray-600"
+                              title="Copy User ID"
+                            >
+                              {copiedId === user.id ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                              <span className="text-sm font-medium text-white">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {user.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            Use ID {user.id} for forms
                           </span>
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.name}
-                        </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

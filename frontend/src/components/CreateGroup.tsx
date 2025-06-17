@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Users, CheckCircle, AlertCircle } from "lucide-react";
-import { apiService, type User } from "../lib/api";
+import { Users, CheckCircle, AlertCircle, Copy, Check } from "lucide-react";
+import { apiService, type User, type Group } from "../lib/api";
 
 const CreateGroup: React.FC = () => {
   const [groupName, setGroupName] = useState("");
@@ -12,6 +12,8 @@ const CreateGroup: React.FC = () => {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [createdGroup, setCreatedGroup] = useState<Group | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -36,6 +38,16 @@ const CreateGroup: React.FC = () => {
     );
   };
 
+  const copyToClipboard = async (id: number) => {
+    try {
+      await navigator.clipboard.writeText(id.toString());
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy ID:", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupName.trim()) {
@@ -51,8 +63,15 @@ const CreateGroup: React.FC = () => {
     setMessage(null);
 
     try {
-      await apiService.createGroup(groupName.trim(), selectedUsers);
-      setMessage({ type: "success", text: "Group created successfully!" });
+      const group = await apiService.createGroup(
+        groupName.trim(),
+        selectedUsers
+      );
+      setCreatedGroup(group);
+      setMessage({
+        type: "success",
+        text: `Group created successfully! Group ID: ${group.id}`,
+      });
       setGroupName("");
       setSelectedUsers([]);
     } catch (error: any) {
@@ -102,6 +121,58 @@ const CreateGroup: React.FC = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm">{message.text}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {createdGroup && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-900 mb-3">
+                ✅ Group Created Successfully!
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700">Group ID:</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-900 rounded font-mono text-lg font-bold">
+                      {createdGroup.id}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(createdGroup.id)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Copy Group ID"
+                    >
+                      {copiedId === createdGroup.id ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700">Group Name:</span>
+                  <span className="text-sm font-medium text-blue-900">
+                    {createdGroup.name}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-sm text-blue-700">Members:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {createdGroup.users.map((user) => (
+                      <span
+                        key={user.id}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      >
+                        {user.name} (ID: {user.id})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
+                  💡 <strong>Save this Group ID!</strong> You'll need it to add
+                  expenses and check balances.
                 </div>
               </div>
             </div>
@@ -168,6 +239,9 @@ const CreateGroup: React.FC = () => {
                             </p>
                             <p className="text-sm text-gray-500">
                               {user.email}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              ID: {user.id}
                             </p>
                           </div>
                         </div>

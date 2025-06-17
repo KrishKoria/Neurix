@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { UserPlus, CheckCircle, AlertCircle } from "lucide-react";
-import { apiService } from "../lib/api";
+import { UserPlus, CheckCircle, AlertCircle, Copy, Check } from "lucide-react";
+import { apiService, type User } from "../lib/api";
 
 const CreateUser: React.FC = () => {
   const [name, setName] = useState("");
@@ -10,6 +10,18 @@ const CreateUser: React.FC = () => {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [createdUser, setCreatedUser] = useState<User | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const copyToClipboard = async (id: number) => {
+    try {
+      await navigator.clipboard.writeText(id.toString());
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy ID:", err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +34,12 @@ const CreateUser: React.FC = () => {
     setMessage(null);
 
     try {
-      await apiService.createUser(name.trim(), email.trim());
-      setMessage({ type: "success", text: "User created successfully!" });
+      const user = await apiService.createUser(name.trim(), email.trim());
+      setCreatedUser(user);
+      setMessage({
+        type: "success",
+        text: `User created successfully! User ID: ${user.id}`,
+      });
       setName("");
       setEmail("");
     } catch (error: any) {
@@ -65,6 +81,51 @@ const CreateUser: React.FC = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm">{message.text}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {createdUser && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-900 mb-3">
+                ✅ User Created Successfully!
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700">User ID:</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-900 rounded font-mono text-lg font-bold">
+                      {createdUser.id}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(createdUser.id)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Copy User ID"
+                    >
+                      {copiedId === createdUser.id ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700">Name:</span>
+                  <span className="text-sm font-medium text-blue-900">
+                    {createdUser.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-700">Email:</span>
+                  <span className="text-sm font-medium text-blue-900">
+                    {createdUser.email}
+                  </span>
+                </div>
+                <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-800">
+                  💡 <strong>Save this User ID!</strong> You'll need it to
+                  create groups and check balances.
                 </div>
               </div>
             </div>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Receipt, CheckCircle, AlertCircle } from "lucide-react";
 import {
   apiService,
-  type ExpenseCreate,
-  type Group,
   type User,
+  type Group,
+  type ExpenseCreate,
 } from "../lib/api";
 
 const AddExpense: React.FC = () => {
@@ -160,6 +160,20 @@ const AddExpense: React.FC = () => {
             </h3>
           </div>
 
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">
+              💡 Need Group ID?
+            </h4>
+            <p className="text-sm text-blue-700 mb-2">
+              Don't know your Group ID? Check the Dashboard or Create Group page
+              to see all group IDs.
+            </p>
+            <p className="text-xs text-blue-600">
+              Group IDs are shown when you create a group or you can find them
+              on the Dashboard.
+            </p>
+          </div>
+
           {message && (
             <div
               className={`mb-4 p-4 rounded-md ${
@@ -189,36 +203,57 @@ const AddExpense: React.FC = () => {
                 htmlFor="groupId"
                 className="block text-sm font-medium text-gray-700"
               >
-                Group ID
+                Group ID <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                id="groupId"
-                value={groupId}
-                onChange={(e) => handleGroupIdChange(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="Enter group ID"
-                disabled={loading}
-              />
+              <div className="mt-1 relative">
+                <input
+                  type="number"
+                  id="groupId"
+                  value={groupId}
+                  onChange={(e) => handleGroupIdChange(e.target.value)}
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border pr-10"
+                  placeholder="Enter group ID (e.g., 1, 2, 3...)"
+                  disabled={loading}
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  {loadingGroup && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  )}
+                </div>
+              </div>
               {loadingGroup && (
                 <p className="mt-1 text-sm text-gray-500">Loading group...</p>
               )}
             </div>
 
             {selectedGroup && (
-              <div className="bg-gray-50 rounded-md p-3">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">
-                  Group: {selectedGroup.name}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedGroup.users.map((user) => (
-                    <span
-                      key={user.id}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {user.name}
-                    </span>
-                  ))}
+              <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                <div className="flex items-center mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <h4 className="text-sm font-medium text-green-900">
+                    Group Found!
+                  </h4>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-green-800">
+                    <strong>Group:</strong> {selectedGroup.name} (ID:{" "}
+                    {selectedGroup.id})
+                  </p>
+                  <div>
+                    <p className="text-sm text-green-800 mb-1">
+                      <strong>Members:</strong>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedGroup.users.map((user) => (
+                        <span
+                          key={user.id}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {user.name} (ID: {user.id})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -228,7 +263,7 @@ const AddExpense: React.FC = () => {
                 htmlFor="description"
                 className="block text-sm font-medium text-gray-700"
               >
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -236,7 +271,7 @@ const AddExpense: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="What was this expense for?"
+                placeholder="What was this expense for? (e.g., Dinner, Groceries, Movie tickets)"
                 disabled={loading}
               />
             </div>
@@ -246,7 +281,7 @@ const AddExpense: React.FC = () => {
                 htmlFor="amount"
                 className="block text-sm font-medium text-gray-700"
               >
-                Amount ($)
+                Amount ($) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -266,7 +301,7 @@ const AddExpense: React.FC = () => {
                   htmlFor="paidBy"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Paid By
+                  Paid By <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="paidBy"
@@ -278,7 +313,7 @@ const AddExpense: React.FC = () => {
                   <option value="">Select who paid</option>
                   {selectedGroup.users.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.name}
+                      {user.name} (ID: {user.id})
                     </option>
                   ))}
                 </select>
@@ -300,7 +335,7 @@ const AddExpense: React.FC = () => {
                     disabled={loading}
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Equal split
+                    Equal split (everyone pays the same amount)
                   </span>
                 </label>
                 <label className="flex items-center">
@@ -315,24 +350,29 @@ const AddExpense: React.FC = () => {
                     disabled={loading}
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Percentage split
+                    Percentage split (custom percentages for each person)
                   </span>
                 </label>
               </div>
             </div>
 
             {splitType === "percentage" && selectedGroup && (
-              <div>
+              <div className="bg-gray-50 rounded-lg p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Percentage Distribution (Total:{" "}
                   {getTotalPercentage().toFixed(1)}%)
+                  {getTotalPercentage() !== 100 && (
+                    <span className="text-red-600 ml-2">
+                      ⚠️ Must equal 100%
+                    </span>
+                  )}
                 </label>
                 <div className="space-y-3">
                   {selectedGroup.users.map((user) => (
                     <div key={user.id} className="flex items-center space-x-3">
                       <div className="flex-1">
                         <span className="text-sm text-gray-700">
-                          {user.name}
+                          {user.name} (ID: {user.id})
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">

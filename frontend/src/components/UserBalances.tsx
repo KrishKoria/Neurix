@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { User, CheckCircle, AlertCircle, Search } from "lucide-react";
+import { User, CheckCircle, AlertCircle, Search, Info } from "lucide-react";
 import { apiService, type UserBalance } from "../lib/api";
 
 const UserBalances: React.FC = () => {
   const [userId, setUserId] = useState("");
   const [balances, setBalances] = useState<UserBalance[]>([]);
+  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -23,6 +24,16 @@ const UserBalances: React.FC = () => {
     try {
       const balancesData = await apiService.getUserBalances(parseInt(userId));
       setBalances(balancesData);
+
+      // Get user details for the name
+      try {
+        const users = await apiService.getUsers();
+        const user = users.find((u) => u.id === parseInt(userId));
+        setUserName(user ? user.name : `User ${userId}`);
+      } catch (error) {
+        setUserName(`User ${userId}`);
+      }
+
       if (balancesData.length === 0) {
         setMessage({ type: "error", text: "No balances found for this user" });
       }
@@ -32,6 +43,7 @@ const UserBalances: React.FC = () => {
         text: error.response?.data?.detail || "Failed to load user balances",
       });
       setBalances([]);
+      setUserName("");
     } finally {
       setLoading(false);
     }
@@ -78,6 +90,22 @@ const UserBalances: React.FC = () => {
             </h3>
           </div>
 
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 mb-1">
+                  How to find User IDs:
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Check the Dashboard to see all users and their IDs</li>
+                  <li>• User IDs are shown when you create a new user</li>
+                  <li>• Try common IDs like 1, 2, 3, etc.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
             <div className="flex space-x-3">
               <div className="flex-1">
@@ -90,7 +118,7 @@ const UserBalances: React.FC = () => {
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"
-                  placeholder="Enter user ID"
+                  placeholder="Enter user ID (e.g., 1, 2, 3...)"
                   disabled={loading}
                 />
               </div>
@@ -133,7 +161,7 @@ const UserBalances: React.FC = () => {
               <div className="mb-6">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
                   <h4 className="text-xl font-semibold mb-2">
-                    Overall Balance for User {userId}
+                    💰 Overall Balance for {userName} (User ID: {userId})
                   </h4>
                   <div className="flex items-center justify-between">
                     <span className="text-blue-100">
@@ -178,6 +206,9 @@ const UserBalances: React.FC = () => {
                           <div>
                             <p className="text-lg font-medium text-gray-900">
                               {balance.group_name}
+                              <span className="text-sm text-gray-500 ml-2">
+                                (ID: {balance.group_id})
+                              </span>
                             </p>
                             <p className={`text-sm ${color}`}>{label}</p>
                           </div>
