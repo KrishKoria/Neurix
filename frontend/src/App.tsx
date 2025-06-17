@@ -14,6 +14,7 @@ import CreateGroup from "./components/CreateGroup";
 import AddExpense from "./components/AddExpense";
 import GroupBalances from "./components/GroupBalances";
 import UserBalances from "./components/UserBalances";
+import Chatbot from "./components/Chatbot";
 
 const Navigation = () => {
   const location = useLocation();
@@ -135,6 +136,7 @@ const App: React.FC = () => {
             <Route path="/user-balances" element={<UserBalances />} />
           </Routes>
         </main>
+        <Chatbot />
       </div>
     </Router>
   );

@@ -2,9 +2,11 @@ from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, and_, text
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel, validator
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from models import Base, User, Group, Expense, ExpenseSplit, SplitType
 from sqlalchemy.sql import func
+import openai
+import json
 import os
 import time
 import logging
@@ -16,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/splitwise")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+if DEEPSEEK_API_KEY:
+    openai.api_key = DEEPSEEK_API_KEY
 logger.info(f"Database URL: {DATABASE_URL}")
 
 # Global variables for database
@@ -149,6 +154,259 @@ class UserBalanceResponse(BaseModel):
     group_id: int
     group_name: str
     balance: float
+
+class ChatbotQuery(BaseModel):
+    query: str
+    user_context: Optional[Dict[str, Any]] = None
+
+class ChatbotResponse(BaseModel):
+    response: str
+    context_used: Optional[Dict[str, Any]] = None
+
+
+# Helper function to get context data
+def get_chatbot_context(db: Session):
+    """Get comprehensive context data for the chatbot"""
+    try:
+        # Get all users
+        users = db.query(User).all()
+        users_data = [{"id": user.id, "name": user.name, "email": user.email} for user in users]
+        
+        # Get all groups with members and expenses
+        groups = db.query(Group).all()
+        groups_data = []
+        
+        for group in groups:
+            # Calculate total expenses for group
+            total_expenses = sum(expense.amount for expense in group.expenses)
+            
+            # Get recent expenses
+            recent_expenses = (
+                db.query(Expense)
+                .filter(Expense.group_id == group.id)
+                .order_by(Expense.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            
+            expenses_data = []
+            for expense in recent_expenses:
+                payer = db.query(User).filter(User.id == expense.paid_by).first()
+                expenses_data.append({
+                    "id": expense.id,
+                    "description": expense.description,
+                    "amount": expense.amount,
+                    "paid_by": {"id": payer.id, "name": payer.name} if payer else None,
+                    "split_type": expense.split_type.value,
+                    "created_at": expense.created_at.isoformat() if expense.created_at else None
+                })
+            
+            # Get balances for this group
+            balances = []
+            for user in group.users:
+                # Amount user paid
+                paid_amount = (
+                    db.query(Expense)
+                    .filter(and_(Expense.group_id == group.id, Expense.paid_by == user.id))
+                    .with_entities(func.sum(Expense.amount))
+                    .scalar() or 0
+                )
+                
+                # Amount user owes
+                owed_amount = (
+                    db.query(ExpenseSplit)
+                    .join(Expense)
+                    .filter(and_(Expense.group_id == group.id, ExpenseSplit.user_id == user.id))
+                    .with_entities(func.sum(ExpenseSplit.amount))
+                    .scalar() or 0
+                )
+                
+                balance = paid_amount - owed_amount
+                balances.append({
+                    "user_id": user.id,
+                    "user_name": user.name,
+                    "balance": balance,
+                    "paid_total": paid_amount,
+                    "owes_total": owed_amount
+                })
+            
+            groups_data.append({
+                "id": group.id,
+                "name": group.name,
+                "members": [{"id": user.id, "name": user.name} for user in group.users],
+                "total_expenses": total_expenses,
+                "recent_expenses": expenses_data,
+                "balances": balances
+            })
+        
+        return {
+            "users": users_data,
+            "groups": groups_data,
+            "summary": {
+                "total_users": len(users_data),
+                "total_groups": len(groups_data),
+                "total_expenses": sum(group["total_expenses"] for group in groups_data)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting chatbot context: {e}")
+        return {}
+
+def generate_chatbot_response(query: str, context: Dict[str, Any]) -> str:
+    """Generate response using OpenAI or fallback to rule-based responses"""
+
+    if not DEEPSEEK_API_KEY:
+        return generate_fallback_response(query, context)
+    
+    try:
+        # Create system prompt with context
+        system_prompt = f"""
+You are a helpful assistant for a Splitwise expense-splitting application. You have access to the following data:
+
+CONTEXT DATA:
+{json.dumps(context, indent=2)}
+
+Answer user queries about expenses, balances, groups, and users based on this data. 
+- Provide specific numbers and details when available
+- Be conversational and helpful
+- If data is not available, mention what's missing
+- Format monetary amounts with $ symbol
+- Use user names instead of IDs when possible
+- For balance queries: positive balance means they are owed money, negative means they owe money
+
+Current capabilities:
+- Check balances for users in groups
+- Find recent expenses and who paid
+- Show group summaries and member information
+- Calculate totals and provide expense breakdowns
+"""
+
+        # Use OpenAI API
+        client = openai.OpenAI(api_key=DEEPSEEK_API_KEY,base_url="https://api.deepseek.com")
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip()
+        
+    except Exception as e:
+        logger.error(f"OpenAI API error: {e}")
+        return generate_fallback_response(query, context)
+
+def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
+    """Generate rule-based responses when OpenAI is not available"""
+    query_lower = query.lower()
+    
+    try:
+        # Extract context data
+        users = context.get("users", [])
+        groups = context.get("groups", [])
+        
+        # Balance queries
+        if "owe" in query_lower or "balance" in query_lower:
+            # Try to find user and group names in query
+            user_name = None
+            group_name = None
+            
+            for user in users:
+                if user["name"].lower() in query_lower:
+                    user_name = user["name"]
+                    break
+            
+            for group in groups:
+                if group["name"].lower() in query_lower:
+                    group_name = group["name"]
+                    break
+            
+            if user_name and group_name:
+                # Find specific balance
+                for group in groups:
+                    if group["name"].lower() == group_name.lower():
+                        for balance in group["balances"]:
+                            if balance["user_name"].lower() == user_name.lower():
+                                amount = abs(balance["balance"])
+                                if balance["balance"] > 0:
+                                    return f"{user_name} is owed ${amount:.2f} in {group_name}."
+                                elif balance["balance"] < 0:
+                                    return f"{user_name} owes ${amount:.2f} in {group_name}."
+                                else:
+                                    return f"{user_name} is settled up in {group_name}."
+                return f"Could not find balance information for {user_name} in {group_name}."
+            
+            elif user_name:
+                # Show all balances for user
+                total_balance = 0
+                group_balances = []
+                
+                for group in groups:
+                    for balance in group["balances"]:
+                        if balance["user_name"].lower() == user_name.lower():
+                            total_balance += balance["balance"]
+                            group_balances.append(f"{group['name']}: ${balance['balance']:.2f}")
+                
+                if group_balances:
+                    balance_text = "\n".join(group_balances)
+                    return f"{user_name}'s balances:\n{balance_text}\n\nTotal: ${total_balance:.2f}"
+                return f"No balance information found for {user_name}."
+        
+        # Expense queries
+        elif "expense" in query_lower or "paid" in query_lower:
+            if "latest" in query_lower or "recent" in query_lower:
+                all_expenses = []
+                for group in groups:
+                    for expense in group["recent_expenses"][:3]:  # Last 3
+                        all_expenses.append(f"${expense['amount']:.2f} for {expense['description']} in {group['name']} (paid by {expense['paid_by']['name'] if expense['paid_by'] else 'Unknown'})")
+                
+                if all_expenses:
+                    return f"Recent expenses:\n" + "\n".join(all_expenses[:3])
+                return "No recent expenses found."
+            
+            # Who paid the most
+            elif "most" in query_lower and "paid" in query_lower:
+                group_name = None
+                for group in groups:
+                    if group["name"].lower() in query_lower:
+                        group_name = group["name"]
+                        break
+                
+                if group_name:
+                    for group in groups:
+                        if group["name"].lower() == group_name.lower():
+                            max_paid = 0
+                            top_payer = None
+                            for balance in group["balances"]:
+                                if balance["paid_total"] > max_paid:
+                                    max_paid = balance["paid_total"]
+                                    top_payer = balance["user_name"]
+                            
+                            if top_payer:
+                                return f"In {group_name}, {top_payer} has paid the most with ${max_paid:.2f}."
+                            return f"No payment information found for {group_name}."
+                return "Please specify which group you're asking about."
+        
+        # Group information
+        elif "group" in query_lower:
+            if groups:
+                group_list = []
+                for group in groups:
+                    member_count = len(group["members"])
+                    group_list.append(f"{group['name']}: {member_count} members, ${group['total_expenses']:.2f} total expenses")
+                return f"Available groups:\n" + "\n".join(group_list)
+            return "No groups found."
+        
+        # Default response
+        return f"I found {len(users)} users and {len(groups)} groups in your data. Try asking about:\n- User balances: 'How much does [name] owe in [group]?'\n- Recent expenses: 'Show me latest expenses'\n- Group info: 'Who paid the most in [group]?'"
+        
+    except Exception as e:
+        logger.error(f"Fallback response error: {e}")
+        return "Sorry, I encountered an error processing your request. Please try again."
 
 # Startup event to initialize database connection
 @app.on_event("startup")
@@ -423,6 +681,34 @@ def get_user_balances(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting user balances: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.post("/chatbot", response_model=ChatbotResponse)
+def chatbot_query(query: ChatbotQuery, db: Session = Depends(get_db)):
+    """Process natural language queries about expenses and balances"""
+    try:
+        # Get comprehensive context
+        context = get_chatbot_context(db)
+        
+        # Generate response
+        response_text = generate_chatbot_response(query.query, context)
+        
+        logger.info(f"Chatbot query: '{query.query}' - Response generated")
+        
+        return ChatbotResponse(
+            response=response_text,
+            context_used={
+                "users_count": len(context.get("users", [])),
+                "groups_count": len(context.get("groups", [])),
+                "has_openai": bool(OPENAI_API_KEY)
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        return ChatbotResponse(
+            response="Sorry, I encountered an error processing your request. Please try again later.",
+            context_used={"error": str(e)}
+        )
 
 if __name__ == "__main__":
     import uvicorn

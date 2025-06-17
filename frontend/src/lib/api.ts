@@ -82,6 +82,23 @@ export interface UserBalance {
   balance: number;
 }
 
+export interface ChatbotQuery {
+  query: string;
+  user_context?: any;
+}
+
+export interface ChatbotResponse {
+  response: string;
+  context_used?: any;
+}
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+}
+
 // API functions
 export const apiService = {
   // Users
@@ -135,6 +152,10 @@ export const apiService = {
     return response.data;
   },
 
+  async queryChatbot(query: string): Promise<ChatbotResponse> {
+    const response = await api.post("/chatbot", { query });
+    return response.data;
+  },
   // Health check
   async healthCheck(): Promise<{ status: string; database: string }> {
     const response = await api.get("/health");
