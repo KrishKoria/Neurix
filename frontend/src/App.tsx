@@ -7,13 +7,13 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Users, PlusCircle, DollarSign, BarChart3, Home } from "lucide-react";
+import { apiService } from "./lib/api";
+import Dashboard from "./components/Dashboard";
 import CreateUser from "./components/CreateUser";
 import CreateGroup from "./components/CreateGroup";
 import AddExpense from "./components/AddExpense";
 import GroupBalances from "./components/GroupBalances";
 import UserBalances from "./components/UserBalances";
-import Dashboard from "./components/Dashboard";
-import { apiService } from "./services/api";
 
 const Navigation = () => {
   const location = useLocation();
