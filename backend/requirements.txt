@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
-psycopg[binary]
 pydantic
 python-multipart
-psycopg2
+psycopg2-binary
