@@ -53,7 +53,7 @@ The `.env` file is already configured with:
 DATABASE_URL=postgresql://postgres:password@postgres:5432/splitwise
 
 # DeepSeek API for AI chatbot (already configured)
-DEEPSEEK_API_KEY=sk-b1b2c5d83b2e420cba6181a186974b82
+DEEPSEEK_API_KEY=<your_api_key>
 ```
 
 ## API Documentation
