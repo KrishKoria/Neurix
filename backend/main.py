@@ -699,7 +699,7 @@ def chatbot_query(query: ChatbotQuery, db: Session = Depends(get_db)):
             context_used={
                 "users_count": len(context.get("users", [])),
                 "groups_count": len(context.get("groups", [])),
-                "has_openai": bool(OPENAI_API_KEY)
+                "has_openai": bool(DEEPSEEK_API_KEY)
             }
         )
         
