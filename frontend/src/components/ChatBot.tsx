@@ -8,6 +8,8 @@ import {
   Minimize2,
   Maximize2,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { apiService, type ChatMessage, type ChatbotResponse } from "../lib/api";
 
 const Chatbot: React.FC = () => {
@@ -16,7 +18,7 @@ const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
-      text: 'Hi! I\'m your Splitwise assistant. Ask me anything about your expenses, balances, or groups. For example:\n\n• "How much does Alice owe in Goa Trip?"\n• "Show me recent expenses"\n• "Who paid the most in Weekend Trip?"',
+      text: 'Hi! I\'m your Splitwise assistant. Ask me anything about your expenses, balances, or groups. For example:\n\n• **"How much does Alice owe in Goa Trip?"**\n• **"Show me recent expenses"**\n• **"Who paid the most in Weekend Trip?"**',
       isUser: false,
       timestamp: new Date(),
     },
@@ -82,13 +84,115 @@ const Chatbot: React.FC = () => {
     }
   };
 
-  const formatMessage = (text: string) => {
-    return text.split("\n").map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < text.split("\n").length - 1 && <br />}
-      </React.Fragment>
-    ));
+  // Custom markdown components for better styling in chat
+  const markdownComponents = {
+    // Style paragraphs
+    p: ({ children }: any) => <p className="mb-2 last:mb-0">{children}</p>,
+
+    // Style lists
+    ul: ({ children }: any) => (
+      <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>
+    ),
+    ol: ({ children }: any) => (
+      <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>
+    ),
+    li: ({ children }: any) => <li className="text-sm">{children}</li>,
+
+    // Style headings
+    h1: ({ children }: any) => (
+      <h1 className="text-lg font-bold mb-2">{children}</h1>
+    ),
+    h2: ({ children }: any) => (
+      <h2 className="text-md font-bold mb-2">{children}</h2>
+    ),
+    h3: ({ children }: any) => (
+      <h3 className="text-sm font-bold mb-1">{children}</h3>
+    ),
+
+    // Style emphasis
+    strong: ({ children }: any) => (
+      <strong className="font-semibold">{children}</strong>
+    ),
+    em: ({ children }: any) => <em className="italic">{children}</em>,
+
+    // Style code
+    code: ({ children, className }: any) => {
+      const isInline = !className;
+      if (isInline) {
+        return (
+          <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs font-mono">
+            {children}
+          </code>
+        );
+      }
+      return (
+        <pre className="bg-gray-200 text-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">
+          <code>{children}</code>
+        </pre>
+      );
+    },
+
+    // Style tables
+    table: ({ children }: any) => (
+      <table className="min-w-full border-collapse border border-gray-300 text-xs mb-2">
+        {children}
+      </table>
+    ),
+    th: ({ children }: any) => (
+      <th className="border border-gray-300 px-2 py-1 bg-gray-100 font-semibold text-left">
+        {children}
+      </th>
+    ),
+    td: ({ children }: any) => (
+      <td className="border border-gray-300 px-2 py-1">{children}</td>
+    ),
+
+    // Style blockquotes
+    blockquote: ({ children }: any) => (
+      <blockquote className="border-l-4 border-gray-300 pl-3 mb-2 text-gray-600">
+        {children}
+      </blockquote>
+    ),
+
+    // Style links (if any)
+    a: ({ children, href }: any) => (
+      <a
+        href={href}
+        className="text-blue-500 underline hover:text-blue-700"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    ),
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    if (message.isUser) {
+      // User messages: simple text formatting
+      return (
+        <div className="text-sm">
+          {message.text.split("\n").map((line, index) => (
+            <React.Fragment key={index}>
+              {line}
+              {index < message.text.split("\n").length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </div>
+      );
+    } else {
+      // Bot messages: render markdown
+      return (
+        <div className="text-sm prose-sm max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={markdownComponents}
+          >
+            {message.text}
+          </ReactMarkdown>
+        </div>
+      );
+    }
   };
 
   // Suggested queries
@@ -185,11 +289,9 @@ const Chatbot: React.FC = () => {
                           : "bg-gray-100 text-gray-900"
                       }`}
                     >
-                      <div className="text-sm">
-                        {formatMessage(message.text)}
-                      </div>
+                      {renderMessage(message)}
                       <div
-                        className={`text-xs mt-1 ${
+                        className={`text-xs mt-2 ${
                           message.isUser ? "text-blue-100" : "text-gray-500"
                         }`}
                       >

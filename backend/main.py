@@ -267,12 +267,22 @@ CONTEXT DATA:
 {json.dumps(context, indent=2)}
 
 Answer user queries about expenses, balances, groups, and users based on this data. 
-- Provide specific numbers and details when available
-- Be conversational and helpful
-- If data is not available, mention what's missing
-- Format monetary amounts with $ symbol
+
+FORMATTING GUIDELINES:
+- Use **bold** for important amounts and names
+- Use bullet points (•) for lists
+- Use tables when showing multiple balances or expenses
+- Use headings (##) to organize sections
+- Format monetary amounts as **$XX.XX**
 - Use user names instead of IDs when possible
-- For balance queries: positive balance means they are owed money, negative means they owe money
+
+BALANCE INTERPRETATION:
+- Positive balance: person is owed money (they should receive)
+- Negative balance: person owes money (they should pay)
+- Zero balance: person is settled up
+
+Provide specific numbers and details when available. Be conversational and helpful.
+If data is not available, clearly mention what's missing.
 
 Current capabilities:
 - Check balances for users in groups
@@ -301,7 +311,7 @@ Current capabilities:
         return generate_fallback_response(query, context)
 
 def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
-    """Generate rule-based responses when OpenAI is not available"""
+    """Generate rule-based responses with markdown formatting when OpenAI is not available"""
     query_lower = query.lower()
     
     try:
@@ -333,12 +343,12 @@ def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
                             if balance["user_name"].lower() == user_name.lower():
                                 amount = abs(balance["balance"])
                                 if balance["balance"] > 0:
-                                    return f"{user_name} is owed ${amount:.2f} in {group_name}."
+                                    return f"## Balance for **{user_name}** in **{group_name}**\n\n**{user_name}** is owed **${amount:.2f}** in {group_name}."
                                 elif balance["balance"] < 0:
-                                    return f"{user_name} owes ${amount:.2f} in {group_name}."
+                                    return f"## Balance for **{user_name}** in **{group_name}**\n\n**{user_name}** owes **${amount:.2f}** in {group_name}."
                                 else:
-                                    return f"{user_name} is settled up in {group_name}."
-                return f"Could not find balance information for {user_name} in {group_name}."
+                                    return f"## Balance for **{user_name}** in **{group_name}**\n\n**{user_name}** is **settled up** in {group_name}."
+                return f"❌ Could not find balance information for **{user_name}** in **{group_name}**."
             
             elif user_name:
                 # Show all balances for user
@@ -349,12 +359,14 @@ def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
                     for balance in group["balances"]:
                         if balance["user_name"].lower() == user_name.lower():
                             total_balance += balance["balance"]
-                            group_balances.append(f"{group['name']}: ${balance['balance']:.2f}")
+                            status = "+" if balance["balance"] >= 0 else ""
+                            group_balances.append(f"• **{group['name']}**: {status}**${balance['balance']:.2f}**")
                 
                 if group_balances:
                     balance_text = "\n".join(group_balances)
-                    return f"{user_name}'s balances:\n{balance_text}\n\nTotal: ${total_balance:.2f}"
-                return f"No balance information found for {user_name}."
+                    total_status = "+" if total_balance >= 0 else ""
+                    return f"## **{user_name}'s** Balance Summary\n\n{balance_text}\n\n**Total Overall**: {total_status}**${total_balance:.2f}**"
+                return f"❌ No balance information found for **{user_name}**."
         
         # Expense queries
         elif "expense" in query_lower or "paid" in query_lower:
@@ -362,11 +374,12 @@ def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
                 all_expenses = []
                 for group in groups:
                     for expense in group["recent_expenses"][:3]:  # Last 3
-                        all_expenses.append(f"${expense['amount']:.2f} for {expense['description']} in {group['name']} (paid by {expense['paid_by']['name'] if expense['paid_by'] else 'Unknown'})")
+                        payer_name = expense['paid_by']['name'] if expense['paid_by'] else 'Unknown'
+                        all_expenses.append(f"• **${expense['amount']:.2f}** for *{expense['description']}* in **{group['name']}** (paid by **{payer_name}**)")
                 
                 if all_expenses:
-                    return f"Recent expenses:\n" + "\n".join(all_expenses[:3])
-                return "No recent expenses found."
+                    return f"## 📋 Recent Expenses\n\n" + "\n".join(all_expenses[:3])
+                return "❌ No recent expenses found."
             
             # Who paid the most
             elif "most" in query_lower and "paid" in query_lower:
@@ -387,9 +400,9 @@ def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
                                     top_payer = balance["user_name"]
                             
                             if top_payer:
-                                return f"In {group_name}, {top_payer} has paid the most with ${max_paid:.2f}."
-                            return f"No payment information found for {group_name}."
-                return "Please specify which group you're asking about."
+                                return f"## 💰 Top Payer in **{group_name}**\n\n**{top_payer}** has paid the most with **${max_paid:.2f}**."
+                            return f"❌ No payment information found for **{group_name}**."
+                return "❓ Please specify which group you're asking about."
         
         # Group information
         elif "group" in query_lower:
@@ -397,16 +410,26 @@ def generate_fallback_response(query: str, context: Dict[str, Any]) -> str:
                 group_list = []
                 for group in groups:
                     member_count = len(group["members"])
-                    group_list.append(f"{group['name']}: {member_count} members, ${group['total_expenses']:.2f} total expenses")
-                return f"Available groups:\n" + "\n".join(group_list)
-            return "No groups found."
+                    group_list.append(f"• **{group['name']}**: {member_count} members, **${group['total_expenses']:.2f}** total expenses")
+                return f"## 👥 Available Groups\n\n" + "\n".join(group_list)
+            return "❌ No groups found."
         
         # Default response
-        return f"I found {len(users)} users and {len(groups)} groups in your data. Try asking about:\n- User balances: 'How much does [name] owe in [group]?'\n- Recent expenses: 'Show me latest expenses'\n- Group info: 'Who paid the most in [group]?'"
+        return f"""## 🤖 Splitwise Assistant Help
+
+I found **{len(users)} users** and **{len(groups)} groups** in your data.
+
+### Try asking about:
+• **User balances**: "How much does [name] owe in [group]?"
+• **Recent expenses**: "Show me latest expenses"  
+• **Group info**: "Who paid the most in [group]?"
+• **Group overview**: "List all groups"
+
+What would you like to know? 😊"""
         
     except Exception as e:
         logger.error(f"Fallback response error: {e}")
-        return "Sorry, I encountered an error processing your request. Please try again."
+        return "❌ Sorry, I encountered an error processing your request. Please try again."
 
 # Startup event to initialize database connection
 @app.on_event("startup")
