@@ -1,5 +1,6 @@
 from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Any
+
 # Pydantic models for request/response
 class UserCreate(BaseModel):
     name: str
