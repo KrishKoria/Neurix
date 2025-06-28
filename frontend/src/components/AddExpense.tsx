@@ -4,13 +4,15 @@ import {
   apiService,
   type User,
   type Group,
+  type GroupSummary,
   type ExpenseCreate,
 } from "../lib/api";
 
 const AddExpense: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<GroupSummary | null>(null);
+  const [selectedGroupDetails, setSelectedGroupDetails] = useState<Group | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -46,7 +48,7 @@ const AddExpense: React.FC = () => {
           );
           if (group) {
             setSelectedGroup(group);
-            initializePercentageSplits(group);
+            // initializePercentageSplits will be called by useEffect when selectedGroupDetails is loaded
           }
         }
       } catch (error) {
@@ -58,6 +60,29 @@ const AddExpense: React.FC = () => {
 
     loadData();
   }, []);
+
+  // Fetch full group details when selectedGroup changes
+  useEffect(() => {
+    const fetchGroupDetails = async () => {
+      if (selectedGroup) {
+        try {
+          const groupDetails = await apiService.getGroup(selectedGroup.id);
+          setSelectedGroupDetails(groupDetails);
+          // Initialize percentage splits when group details are loaded
+          if (splitType === "percentage") {
+            initializePercentageSplits(groupDetails);
+          }
+        } catch (error) {
+          console.error("Error fetching group details:", error);
+          setSelectedGroupDetails(null);
+        }
+      } else {
+        setSelectedGroupDetails(null);
+      }
+    };
+
+    fetchGroupDetails();
+  }, [selectedGroup]);
 
   const initializePercentageSplits = (group: Group) => {
     const equalPercentage = 100 / (group.users?.length || 1);
@@ -77,10 +102,11 @@ const AddExpense: React.FC = () => {
       const group = groups.find((g) => g.id === parseInt(groupId));
       if (group) {
         setSelectedGroup(group);
-        initializePercentageSplits(group);
+        // initializePercentageSplits will be called by useEffect when selectedGroupDetails is loaded
       }
     } else {
       setSelectedGroup(null);
+      setSelectedGroupDetails(null);
       setPercentageSplits({});
     }
   };
@@ -139,7 +165,7 @@ const AddExpense: React.FC = () => {
 
       if (splitType === "percentage") {
         expense.splits =
-          selectedGroup.users?.map((user) => ({
+          selectedGroupDetails?.users?.map((user) => ({
             user_id: user.id,
             percentage: percentageSplits[user.id] || 0,
           })) || [];
@@ -151,8 +177,8 @@ const AddExpense: React.FC = () => {
       setAmount("");
       setPaidBy("");
       setSplitType("equal");
-      if (selectedGroup) {
-        initializePercentageSplits(selectedGroup);
+      if (selectedGroupDetails) {
+        initializePercentageSplits(selectedGroupDetails);
       }
     } catch (error: any) {
       setMessage({
@@ -246,7 +272,7 @@ const AddExpense: React.FC = () => {
                 <option value="">Choose a group</option>
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
-                    {group.name} (ID: {group.id}) - {group.users?.length || 0}{" "}
+                    {group.name} (ID: {group.id}) - {group.member_count || 0}{" "}
                     members
                   </option>
                 ))}
@@ -259,7 +285,7 @@ const AddExpense: React.FC = () => {
                   Group: {selectedGroup.name}
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {selectedGroup.users?.map((user) => (
+                  {selectedGroupDetails?.users?.map((user) => (
                     <span
                       key={user.id}
                       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -310,7 +336,7 @@ const AddExpense: React.FC = () => {
               />
             </div>
 
-            {selectedGroup && selectedGroup.users && (
+            {selectedGroupDetails && selectedGroupDetails.users && (
               <div>
                 <label
                   htmlFor="paidBy"
@@ -326,7 +352,7 @@ const AddExpense: React.FC = () => {
                   disabled={loading}
                 >
                   <option value="">Select who paid</option>
-                  {selectedGroup.users.map((user) => (
+                  {selectedGroupDetails.users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name} (ID: {user.id})
                     </option>
@@ -372,15 +398,15 @@ const AddExpense: React.FC = () => {
             </div>
 
             {splitType === "percentage" &&
-              selectedGroup &&
-              selectedGroup.users && (
+              selectedGroupDetails &&
+              selectedGroupDetails.users && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Percentage Distribution (Total:{" "}
                     {getTotalPercentage().toFixed(1)}%)
                   </label>
                   <div className="space-y-3">
-                    {selectedGroup.users.map((user) => (
+                    {selectedGroupDetails.users.map((user) => (
                       <div
                         key={user.id}
                         className="flex items-center space-x-3"

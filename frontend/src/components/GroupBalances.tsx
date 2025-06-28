@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { BarChart3, CheckCircle, AlertCircle } from "lucide-react";
-import { apiService, type Balance, type Group } from "../lib/api";
+import { apiService, type Balance, type Group, type GroupSummary } from "../lib/api";
 
 const GroupBalances: React.FC = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [selectedGroupDetails, setSelectedGroupDetails] = useState<Group | null>(null);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -35,6 +36,24 @@ const GroupBalances: React.FC = () => {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    const fetchGroupDetails = async () => {
+      if (selectedGroupId) {
+        try {
+          const groupDetails = await apiService.getGroup(parseInt(selectedGroupId));
+          setSelectedGroupDetails(groupDetails);
+        } catch (error) {
+          console.error("Error fetching group details:", error);
+          setSelectedGroupDetails(null);
+        }
+      } else {
+        setSelectedGroupDetails(null);
+      }
+    };
+
+    fetchGroupDetails();
+  }, [selectedGroupId]);
 
   const handleSearch = async (groupId?: string) => {
     const targetGroupId = groupId || selectedGroupId;
@@ -148,7 +167,7 @@ const GroupBalances: React.FC = () => {
                   <option value="">Select a group</option>
                   {groups.map((group) => (
                     <option key={group.id} value={group.id}>
-                      {group.name} (ID: {group.id}) - {group.users?.length || 0}{" "}
+                      {group.name} (ID: {group.id}) - {group.member_count || 0}{" "}
                       members
                     </option>
                   ))}
@@ -164,13 +183,13 @@ const GroupBalances: React.FC = () => {
             </div>
           </div>
 
-          {selectedGroup && (
+          {selectedGroupDetails && (
             <div className="mb-6 bg-gray-50 rounded-md p-4">
               <h4 className="text-sm font-medium text-gray-900 mb-2">
-                Selected Group: {selectedGroup.name}
+                Selected Group: {selectedGroupDetails.name}
               </h4>
               <div className="flex flex-wrap gap-2">
-                {selectedGroup.users?.map((user) => (
+                {selectedGroupDetails.users?.map((user) => (
                   <span
                     key={user.id}
                     className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -208,7 +227,7 @@ const GroupBalances: React.FC = () => {
           {balances.length > 0 && (
             <div>
               <h4 className="text-lg font-medium text-gray-900 mb-4">
-                Balance Summary for {selectedGroup?.name}
+                Balance Summary for {selectedGroupDetails?.name}
               </h4>
               <div className="grid gap-4">
                 {balances.map((balance) => {

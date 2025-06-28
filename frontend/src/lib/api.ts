@@ -61,6 +61,13 @@ export interface Group {
   created_at: string; // ISO 8601 datetime string
 }
 
+export interface GroupSummary {
+  id: number;
+  name: string;
+  member_count: number;
+  total_expenses: number;
+}
+
 export interface ExpenseSplitInput {
   user_id: number;
   percentage?: number;
@@ -167,7 +174,7 @@ export const apiService = {
     const response = await api.get(`/groups/${groupId}/`);
     return response.data;
   },
-  async getAllGroups(): Promise<Group[]> {
+  async getAllGroups(): Promise<GroupSummary[]> {
     try {
       const response = await api.get("/groups/");
       return response.data;

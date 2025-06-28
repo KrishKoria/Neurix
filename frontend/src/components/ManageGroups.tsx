@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { apiService, type Group, type User } from "../lib/api";
+import { apiService, type Group, type GroupSummary, type User } from "../lib/api";
 import { FolderPlus, Search, Edit, Trash2, Plus, Eye, Users } from "lucide-react";
 
 const ManageGroups = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -73,13 +73,27 @@ const ManageGroups = () => {
     }
   };
 
-  const openEditModal = (group: Group) => {
-    setSelectedGroup(group);
-    setFormData({ 
-      name: group.name, 
-      selectedUserIds: group.users.map(u => u.id) 
-    });
-    setShowEditModal(true);
+  const openEditModal = async (groupSummary: GroupSummary) => {
+    try {
+      const fullGroup = await apiService.getGroup(groupSummary.id);
+      setSelectedGroup(fullGroup);
+      setFormData({ 
+        name: fullGroup.name, 
+        selectedUserIds: (fullGroup.users || []).map(u => u.id) 
+      });
+      setShowEditModal(true);
+    } catch (error) {
+      console.error("Error loading group details:", error);
+    }
+  };
+
+  const openViewModal = async (groupSummary: GroupSummary) => {
+    try {
+      const fullGroup = await apiService.getGroup(groupSummary.id);
+      setSelectedGroup(fullGroup);
+    } catch (error) {
+      console.error("Error loading group details:", error);
+    }
   };
 
   const toggleUserSelection = (userId: number) => {
@@ -91,7 +105,16 @@ const ManageGroups = () => {
     }));
   };
 
-  const filteredGroups = groups.filter((group) =>
+  const handleViewGroup = async (groupId: number) => {
+    try {
+      const fullGroup = await apiService.getGroup(groupId);
+      setSelectedGroup(fullGroup);
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+    }
+  };
+
+  const filteredGroups = (groups || []).filter((group) =>
     group.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -158,32 +181,23 @@ const ManageGroups = () => {
                   <div className="flex items-center">
                     <Users className="h-4 w-4 text-gray-400 mr-1" />
                     <span className="text-sm text-gray-500">
-                      {group.users.length} member{group.users.length !== 1 ? 's' : ''}
+                      {group.member_count} member{group.member_count !== 1 ? 's' : ''}
                     </span>
                   </div>
                   <div className="text-xs text-gray-400">
-                    Created: {new Date(group.created_at).toLocaleDateString()}
+                    Group ID: {group.id}
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {group.users.slice(0, 3).map((user) => (
-                    <span
-                      key={user.id}
-                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {user.name}
-                    </span>
-                  ))}
-                  {group.users.length > 3 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                      +{group.users.length - 3} more
-                    </span>
-                  )}
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    {group.member_count} Members
+                  </span>
+                  {/* We'll show member names when viewing group details */}
                 </div>
               </div>
               <div className="mt-4 flex justify-end space-x-2">
                 <button
-                  onClick={() => setSelectedGroup(group)}
+                  onClick={() => handleViewGroup(group.id)}
                   className="p-2 text-gray-400 hover:text-blue-500"
                   title="View Details"
                 >
@@ -245,7 +259,7 @@ const ManageGroups = () => {
                   Select Members
                 </label>
                 <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
-                  {users.map((user) => (
+                  {(users || []).map((user) => (
                     <label key={user.id} className="flex items-center space-x-2 p-1">
                       <input
                         type="checkbox"
@@ -304,7 +318,7 @@ const ManageGroups = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Members</label>
                 <div className="space-y-1">
-                  {selectedGroup.users.map((user) => (
+                  {(selectedGroup.users || []).map((user) => (
                     <p key={user.id} className="text-sm text-gray-900">{user.name}</p>
                   ))}
                 </div>

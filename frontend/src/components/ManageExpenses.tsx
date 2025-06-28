@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { apiService, type Group, type Expense, type User } from "../lib/api";
+import { apiService, type Group, type GroupSummary, type Expense, type User } from "../lib/api";
 import { Receipt, Search, Edit, Trash2, Plus, Eye, DollarSign } from "lucide-react";
 
 const ManageExpenses = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
@@ -69,7 +69,7 @@ const ManageExpenses = () => {
     return user ? user.name : `User ${userId}`;
   };
 
-  const filteredExpenses = expenses.filter((expense) =>
+  const filteredExpenses = (expenses || []).filter((expense) =>
     expense.description.toLowerCase().includes(search.toLowerCase()) ||
     expense.paid_by_name.toLowerCase().includes(search.toLowerCase())
   );
@@ -102,7 +102,7 @@ const ManageExpenses = () => {
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Select a group...</option>
-          {groups.map((group) => (
+          {(groups || []).map((group) => (
             <option key={group.id} value={group.id}>
               {group.name} (${group.total_expenses.toFixed(2)})
             </option>
@@ -157,7 +157,7 @@ const ManageExpenses = () => {
                           ${expense.amount.toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {expense.splits.length} split{expense.splits.length !== 1 ? 's' : ''}
+                          {(expense.splits || []).length} split{(expense.splits || []).length !== 1 ? 's' : ''}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -230,7 +230,7 @@ const ManageExpenses = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Splits</label>
                 <div className="space-y-1">
-                  {selectedExpense.splits.map((split, index) => (
+                  {(selectedExpense.splits || []).map((split, index) => (
                     <div key={index} className="flex justify-between">
                       <span className="text-sm text-gray-900">{split.user_name}</span>
                       <span className="text-sm text-gray-900">

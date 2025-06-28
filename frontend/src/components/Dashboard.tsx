@@ -8,11 +8,11 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { apiService, type User, type Group } from "../lib/api";
+import { apiService, type User, type GroupSummary } from "../lib/api";
 
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -193,11 +193,8 @@ const Dashboard: React.FC = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {users.map((user) => {
-                      const userGroups = groups.filter((group) =>
-                        group.users?.some(
-                          (groupUser) => groupUser.id === user.id
-                        )
-                      );
+                      // Note: Group membership display temporarily disabled
+                      // since we're using GroupSummary which doesn't include user details
 
                       return (
                         <tr key={user.id}>
@@ -238,20 +235,9 @@ const Dashboard: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
-                              {userGroups.length > 0 ? (
-                                userGroups.map((group) => (
-                                  <span
-                                    key={group.id}
-                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                  >
-                                    {group.name}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-400">
-                                  No groups
-                                </span>
-                              )}
+                              <span className="text-xs text-gray-400">
+                                Group membership info not available
+                              </span>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -337,21 +323,12 @@ const Dashboard: React.FC = () => {
 
                     <div className="mb-3">
                       <p className="text-sm text-gray-500 mb-2">
-                        Members ({group.users?.length || 0}):
+                        Members ({group.member_count || 0}):
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {group.users?.map((user) => (
-                          <span
-                            key={user.id}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {user.name}
-                          </span>
-                        )) || (
-                          <span className="text-xs text-gray-400">
-                            No members
-                          </span>
-                        )}
+                        <span className="text-xs text-gray-400">
+                          Member details not available in summary view
+                        </span>
                       </div>
                     </div>
 

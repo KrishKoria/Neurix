@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiService, type Group } from "../lib/api";
+import { apiService, type GroupSummary } from "../lib/api";
 import { ArrowRightLeft, DollarSign } from "lucide-react";
 
 interface Settlement {
@@ -9,7 +9,7 @@ interface Settlement {
 }
 
 const Settlements = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
