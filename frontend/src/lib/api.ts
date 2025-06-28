@@ -74,10 +74,31 @@ export interface ExpenseCreate {
   splits?: ExpenseSplitInput[];
 }
 
+export interface ExpenseSplit {
+  user_id: number;
+  user_name: string;
+  amount: number;
+  percentage?: number;
+}
+
+export interface Expense {
+  id: number;
+  description: string;
+  amount: number;
+  group_id: number;
+  paid_by: number;
+  paid_by_name: string;
+  split_type: string;
+  splits: ExpenseSplit[];
+  created_at: string;
+}
+
 export interface Balance {
   user_id: number;
   user_name: string;
   balance: number;
+  paid_total: number;
+  owes_total: number;
 }
 
 export interface UserBalance {
@@ -107,28 +128,28 @@ export interface ChatMessage {
 export const apiService = {
   // Users
   async createUser(name: string, email: string): Promise<User> {
-    const response = await api.post("/users", { name, email });
+    const response = await api.post("/users/", { name, email });
     return response.data;
   },
 
   async getUsers(): Promise<User[]> {
-    const response = await api.get("/users");
+    const response = await api.get("/users/");
     return response.data;
   },
 
   // Groups
   async createGroup(name: string, user_ids: number[]): Promise<Group> {
-    const response = await api.post("/groups", { name, user_ids });
+    const response = await api.post("/groups/", { name, user_ids });
     return response.data;
   },
 
   async getGroup(groupId: number): Promise<Group> {
-    const response = await api.get(`/groups/${groupId}`);
+    const response = await api.get(`/groups/${groupId}/`);
     return response.data;
   },
   async getAllGroups(): Promise<Group[]> {
     try {
-      const response = await api.get("/groups");
+      const response = await api.get("/groups/");
       return response.data;
     } catch (error) {
       console.warn("Get all groups endpoint not available yet");
@@ -140,7 +161,7 @@ export const apiService = {
   async createExpense(
     groupId: number,
     expense: ExpenseCreate
-  ): Promise<{ message: string; expense_id: number }> {
+  ): Promise<Expense> {
     const response = await api.post(`/groups/${groupId}/expenses`, expense);
     return response.data;
   },
@@ -157,7 +178,7 @@ export const apiService = {
   },
 
   async queryChatbot(query: string): Promise<ChatbotResponse> {
-    const response = await api.post("/chatbot", { query });
+    const response = await api.post("/chatbot/", { query });
     return response.data;
   },
   // Health check
