@@ -1,11 +1,13 @@
 import axios from "axios";
 
 const getApiUrl = () => {
-  if (typeof window !== "undefined") {
-    return import.meta.env.VITE_API_URL || "http://localhost:8000";
-  }
+  const baseUrl =
+    typeof window !== "undefined"
+      ? import.meta.env.VITE_API_URL || "http://localhost:8000"
+      : import.meta.env.VITE_API_URL || "http://backend:8000";
 
-  return import.meta.env.VITE_API_URL || "http://backend:8000";
+  // Add API versioning prefix
+  return `${baseUrl}/api/v1`;
 };
 
 const API_BASE_URL = getApiUrl();
@@ -48,6 +50,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  created_at: string; // ISO 8601 datetime string
 }
 
 export interface Group {
@@ -55,6 +58,7 @@ export interface Group {
   name: string;
   users: User[];
   total_expenses: number;
+  created_at: string; // ISO 8601 datetime string
 }
 
 export interface ExpenseSplitInput {
@@ -158,7 +162,13 @@ export const apiService = {
   },
   // Health check
   async healthCheck(): Promise<{ status: string; database: string }> {
-    const response = await api.get("/health");
+    // Health endpoint doesn't use API versioning
+    const baseUrl =
+      typeof window !== "undefined"
+        ? import.meta.env.VITE_API_URL || "http://localhost:8000"
+        : import.meta.env.VITE_API_URL || "http://backend:8000";
+
+    const response = await axios.get(`${baseUrl}/health`);
     return response.data;
   },
 };

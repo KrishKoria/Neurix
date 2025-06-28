@@ -14,12 +14,16 @@ A complete expense splitting application similar to Splitwise, built with modern
 
 ### Technical Highlights
 
-- **Modern Stack**: React 18, FastAPI, PostgreSQL, Docker
-- **Type Safety**: Full TypeScript implementation
+- **Modern Stack**: React 19, FastAPI, PostgreSQL, Docker
+- **Type Safety**: Full TypeScript implementation with strict typing
+- **Modular Backend**: Layered architecture with repositories, services, and routers
+- **API Versioning**: RESTful API with `/api/v1` versioning and legacy support
+- **Performance Monitoring**: Request timing, database monitoring, and metrics
 - **Responsive Design**: Mobile-friendly interface with Tailwind CSS
 - **Real-time Health Monitoring**: Automatic backend connectivity checks
 - **Interactive API Documentation**: Swagger UI and ReDoc
 - **Containerized Deployment**: Complete Docker Compose setup
+- **Production Ready**: Rate limiting, error handling, and logging
 
 ## 🏗️ Architecture
 
@@ -27,16 +31,37 @@ A complete expense splitting application similar to Splitwise, built with modern
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │                 │    │                 │    │                 │
 │    Frontend     │    │     Backend     │    │    Database     │
-│   (React 18)    │◄──►│    (FastAPI)    │◄──►│  (PostgreSQL)   │
+│   (React 19)    │◄──►│    (FastAPI)    │◄──►│  (PostgreSQL)   │
 │                 │    │                 │    │                 │
-│  - TypeScript   │    │  - SQLAlchemy   │    │  - Connection   │
-│  - Tailwind     │    │  - Pydantic     │    │    Pooling      │
-│  - Vite         │    │  - DeepSeek API │    │  - Health       │
-│  - Chatbot UI   │    │  - Auto Docs    │    │    Monitoring   │
-│                 │    │                 │    │                 │
+│  - TypeScript   │    │  - Modular      │    │  - Connection   │
+│  - Tailwind     │    │  - SQLAlchemy   │    │    Pooling      │
+│  - Vite         │    │  - Pydantic     │    │  - Health       │
+│  - API Client   │    │  - DeepSeek API │    │    Monitoring   │
+│  - Chatbot UI   │    │  - Versioned    │    │  - Optimized    │
+│                 │    │    APIs         │    │    Queries      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
        :5173                   :8000                   :5432
 ```
+
+## 🔄 Recent Major Updates
+
+### Backend Optimization & Refactoring
+
+- ✅ **Modular Architecture**: Reorganized into `app/` with layers (core, models, schemas, repositories, services, routers, utils)
+- ✅ **API Versioning**: All endpoints now under `/api/v1/` with backward compatibility redirects
+- ✅ **Database Optimization**: Added connection pooling, query optimization, eager loading, and indexes
+- ✅ **Performance Monitoring**: Request timing, database metrics, and performance headers
+- ✅ **Dependency Injection**: Clean dependency management with FastAPI's DI system
+- ✅ **Configuration Management**: Environment-based settings with Pydantic
+- ✅ **Error Handling**: Comprehensive exception handling and logging
+- ✅ **Rate Limiting**: Production-ready rate limiting middleware
+- ✅ **Security**: Trusted host middleware and CORS configuration
+
+### Frontend Compatibility Updates
+
+- ✅ **API Integration**: Updated to use versioned API endpoints (`/api/v1/`)
+- ✅ **Type Safety**: Enhanced TypeScript types matching backend schemas
+- ✅ **Error Handling**: Improved error handling for versioned API responses
 
 ## ⚡ Quick Start
 
