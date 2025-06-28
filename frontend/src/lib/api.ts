@@ -137,6 +137,26 @@ export const apiService = {
     return response.data;
   },
 
+  async getUser(userId: number): Promise<User> {
+    const response = await api.get(`/users/${userId}/`);
+    return response.data;
+  },
+
+  async updateUser(userId: number, name: string, email: string): Promise<User> {
+    const response = await api.put(`/users/${userId}/`, { name, email });
+    return response.data;
+  },
+
+  async deleteUser(userId: number): Promise<{ message: string }> {
+    const response = await api.delete(`/users/${userId}/`);
+    return response.data;
+  },
+
+  async getUserSummary(userId: number): Promise<any> {
+    const response = await api.get(`/users/${userId}/summary`);
+    return response.data;
+  },
+
   // Groups
   async createGroup(name: string, user_ids: number[]): Promise<Group> {
     const response = await api.post("/groups/", { name, user_ids });
@@ -157,6 +177,21 @@ export const apiService = {
     }
   },
 
+  async updateGroup(groupId: number, name: string, user_ids: number[]): Promise<Group> {
+    const response = await api.put(`/groups/${groupId}/`, { name, user_ids });
+    return response.data;
+  },
+
+  async deleteGroup(groupId: number): Promise<{ message: string }> {
+    const response = await api.delete(`/groups/${groupId}/`);
+    return response.data;
+  },
+
+  async getGroupSettlements(groupId: number): Promise<any> {
+    const response = await api.get(`/groups/${groupId}/settlements`);
+    return response.data;
+  },
+
   // Expenses
   async createExpense(
     groupId: number,
@@ -166,14 +201,28 @@ export const apiService = {
     return response.data;
   },
 
-  // Balances
-  async getGroupBalances(groupId: number): Promise<Balance[]> {
-    const response = await api.get(`/groups/${groupId}/balances`);
+  async getExpense(expenseId: number): Promise<Expense> {
+    const response = await api.get(`/expenses/${expenseId}/`);
     return response.data;
   },
 
-  async getUserBalances(userId: number): Promise<UserBalance[]> {
-    const response = await api.get(`/users/${userId}/balances`);
+  async getGroupExpenses(groupId: number): Promise<Expense[]> {
+    const response = await api.get(`/groups/${groupId}/expenses`);
+    return response.data;
+  },
+
+  async updateExpense(expenseId: number, expense: Partial<ExpenseCreate>): Promise<Expense> {
+    const response = await api.put(`/expenses/${expenseId}/`, expense);
+    return response.data;
+  },
+
+  async deleteExpense(expenseId: number): Promise<{ message: string }> {
+    const response = await api.delete(`/expenses/${expenseId}/`);
+    return response.data;
+  },
+
+  async getExpenseStatistics(): Promise<any> {
+    const response = await api.get("/expenses/statistics");
     return response.data;
   },
 
@@ -190,6 +239,17 @@ export const apiService = {
         : import.meta.env.VITE_API_URL || "http://backend:8000";
 
     const response = await axios.get(`${baseUrl}/health`);
+    return response.data;
+  },
+
+  // Balances
+  async getGroupBalances(groupId: number): Promise<Balance[]> {
+    const response = await api.get(`/groups/${groupId}/balances`);
+    return response.data;
+  },
+
+  async getUserBalances(userId: number): Promise<UserBalance[]> {
+    const response = await api.get(`/users/${userId}/balances`);
     return response.data;
   },
 };

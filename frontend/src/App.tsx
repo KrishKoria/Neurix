@@ -6,7 +6,19 @@ import {
   Link,
   useLocation,
 } from "react-router-dom";
-import { Users, PlusCircle, DollarSign, BarChart3, Home } from "lucide-react";
+import { 
+  Users, 
+  PlusCircle, 
+  DollarSign, 
+  BarChart3, 
+  Home, 
+  Settings, 
+  ArrowRightLeft,
+  Receipt,
+  TrendingUp,
+  UserCog,
+  FolderOpen
+} from "lucide-react";
 import { apiService } from "./lib/api";
 import Dashboard from "./components/Dashboard";
 import CreateUser from "./components/CreateUser";
@@ -14,7 +26,12 @@ import CreateGroup from "./components/CreateGroup";
 import AddExpense from "./components/AddExpense";
 import GroupBalances from "./components/GroupBalances";
 import UserBalances from "./components/UserBalances";
-import Chatbot from "./components/Chatbot";
+import ManageUsers from "./components/ManageUsers";
+import ManageGroups from "./components/ManageGroups";
+import ManageExpenses from "./components/ManageExpenses";
+import Settlements from "./components/Settlements";
+import ExpenseStatistics from "./components/ExpenseStatistics";
+import Chatbot from "./components/ChatBot";
 
 const Navigation = () => {
   const location = useLocation();
@@ -24,8 +41,13 @@ const Navigation = () => {
     { path: "/create-user", icon: Users, label: "Create User" },
     { path: "/create-group", icon: PlusCircle, label: "Create Group" },
     { path: "/add-expense", icon: DollarSign, label: "Add Expense" },
+    { path: "/manage-users", icon: UserCog, label: "Manage Users" },
+    { path: "/manage-groups", icon: FolderOpen, label: "Manage Groups" },
+    { path: "/manage-expenses", icon: Receipt, label: "Manage Expenses" },
     { path: "/group-balances", icon: BarChart3, label: "Group Balances" },
     { path: "/user-balances", icon: BarChart3, label: "User Balances" },
+    { path: "/settlements", icon: ArrowRightLeft, label: "Settlements" },
+    { path: "/statistics", icon: TrendingUp, label: "Statistics" },
   ];
 
   return (
@@ -132,8 +154,13 @@ const App: React.FC = () => {
             <Route path="/create-user" element={<CreateUser />} />
             <Route path="/create-group" element={<CreateGroup />} />
             <Route path="/add-expense" element={<AddExpense />} />
+            <Route path="/manage-users" element={<ManageUsers />} />
+            <Route path="/manage-groups" element={<ManageGroups />} />
+            <Route path="/manage-expenses" element={<ManageExpenses />} />
             <Route path="/group-balances" element={<GroupBalances />} />
             <Route path="/user-balances" element={<UserBalances />} />
+            <Route path="/settlements" element={<Settlements />} />
+            <Route path="/statistics" element={<ExpenseStatistics />} />
           </Routes>
         </main>
         <Chatbot />
