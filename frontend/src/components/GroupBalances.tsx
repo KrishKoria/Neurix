@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { BarChart3, CheckCircle, AlertCircle } from "lucide-react";
-import { apiService, type Balance, type Group, type GroupSummary } from "../lib/api";
+import {
+  apiService,
+  type Balance,
+  type Group,
+  type GroupSummary,
+} from "../lib/api";
 
 const GroupBalances: React.FC = () => {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
-  const [selectedGroupDetails, setSelectedGroupDetails] = useState<Group | null>(null);
+  const [selectedGroupDetails, setSelectedGroupDetails] =
+    useState<Group | null>(null);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -41,7 +47,9 @@ const GroupBalances: React.FC = () => {
     const fetchGroupDetails = async () => {
       if (selectedGroupId) {
         try {
-          const groupDetails = await apiService.getGroup(parseInt(selectedGroupId));
+          const groupDetails = await apiService.getGroup(
+            parseInt(selectedGroupId)
+          );
           setSelectedGroupDetails(groupDetails);
         } catch (error) {
           console.error("Error fetching group details:", error);

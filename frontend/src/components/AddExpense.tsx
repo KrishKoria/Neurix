@@ -12,7 +12,8 @@ const AddExpense: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<GroupSummary | null>(null);
-  const [selectedGroupDetails, setSelectedGroupDetails] = useState<Group | null>(null);
+  const [selectedGroupDetails, setSelectedGroupDetails] =
+    useState<Group | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");

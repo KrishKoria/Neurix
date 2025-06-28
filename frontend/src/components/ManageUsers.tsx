@@ -42,9 +42,13 @@ const ManageUsers = () => {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    
+
     try {
-      await apiService.updateUser(selectedUser.id, formData.name, formData.email);
+      await apiService.updateUser(
+        selectedUser.id,
+        formData.name,
+        formData.email
+      );
       setFormData({ name: "", email: "" });
       setShowEditModal(false);
       setSelectedUser(null);
@@ -56,7 +60,7 @@ const ManageUsers = () => {
 
   const handleDeleteUser = async (userId: number) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
-    
+
     try {
       await apiService.deleteUser(userId);
       loadUsers();
@@ -171,9 +175,13 @@ const ManageUsers = () => {
       {filteredUsers.length === 0 && (
         <div className="text-center py-8">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No users found
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {search ? "Try adjusting your search terms." : "Get started by creating a new user."}
+            {search
+              ? "Try adjusting your search terms."
+              : "Get started by creating a new user."}
           </p>
         </div>
       )}
@@ -182,7 +190,9 @@ const ManageUsers = () => {
       {showCreateModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Create New User</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Create New User
+            </h3>
             <form onSubmit={handleCreateUser}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -192,7 +202,9 @@ const ManageUsers = () => {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -204,7 +216,9 @@ const ManageUsers = () => {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -245,7 +259,9 @@ const ManageUsers = () => {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -257,7 +273,9 @@ const ManageUsers = () => {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>

@@ -184,7 +184,11 @@ export const apiService = {
     }
   },
 
-  async updateGroup(groupId: number, name: string, user_ids: number[]): Promise<Group> {
+  async updateGroup(
+    groupId: number,
+    name: string,
+    user_ids: number[]
+  ): Promise<Group> {
     const response = await api.put(`/groups/${groupId}/`, { name, user_ids });
     return response.data;
   },
@@ -218,7 +222,10 @@ export const apiService = {
     return response.data;
   },
 
-  async updateExpense(expenseId: number, expense: Partial<ExpenseCreate>): Promise<Expense> {
+  async updateExpense(
+    expenseId: number,
+    expense: Partial<ExpenseCreate>
+  ): Promise<Expense> {
     const response = await api.put(`/expenses/${expenseId}/`, expense);
     return response.data;
   },

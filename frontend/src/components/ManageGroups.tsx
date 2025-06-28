@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { apiService, type Group, type GroupSummary, type User } from "../lib/api";
-import { FolderPlus, Search, Edit, Trash2, Plus, Eye, Users } from "lucide-react";
+import {
+  apiService,
+  type Group,
+  type GroupSummary,
+  type User,
+} from "../lib/api";
+import {
+  FolderPlus,
+  Search,
+  Edit,
+  Trash2,
+  Plus,
+  Eye,
+  Users,
+} from "lucide-react";
 
 const ManageGroups = () => {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
@@ -10,9 +23,9 @@ const ManageGroups = () => {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [formData, setFormData] = useState({ 
-    name: "", 
-    selectedUserIds: [] as number[] 
+  const [formData, setFormData] = useState({
+    name: "",
+    selectedUserIds: [] as number[],
   });
 
   useEffect(() => {
@@ -24,7 +37,7 @@ const ManageGroups = () => {
       setLoading(true);
       const [groupsData, usersData] = await Promise.all([
         apiService.getAllGroups(),
-        apiService.getUsers()
+        apiService.getUsers(),
       ]);
       setGroups(groupsData);
       setUsers(usersData);
@@ -50,9 +63,13 @@ const ManageGroups = () => {
   const handleUpdateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGroup) return;
-    
+
     try {
-      await apiService.updateGroup(selectedGroup.id, formData.name, formData.selectedUserIds);
+      await apiService.updateGroup(
+        selectedGroup.id,
+        formData.name,
+        formData.selectedUserIds
+      );
       setFormData({ name: "", selectedUserIds: [] });
       setShowEditModal(false);
       setSelectedGroup(null);
@@ -64,7 +81,7 @@ const ManageGroups = () => {
 
   const handleDeleteGroup = async (groupId: number) => {
     if (!confirm("Are you sure you want to delete this group?")) return;
-    
+
     try {
       await apiService.deleteGroup(groupId);
       loadData();
@@ -77,9 +94,9 @@ const ManageGroups = () => {
     try {
       const fullGroup = await apiService.getGroup(groupSummary.id);
       setSelectedGroup(fullGroup);
-      setFormData({ 
-        name: fullGroup.name, 
-        selectedUserIds: (fullGroup.users || []).map(u => u.id) 
+      setFormData({
+        name: fullGroup.name,
+        selectedUserIds: (fullGroup.users || []).map((u) => u.id),
       });
       setShowEditModal(true);
     } catch (error) {
@@ -97,11 +114,11 @@ const ManageGroups = () => {
   };
 
   const toggleUserSelection = (userId: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       selectedUserIds: prev.selectedUserIds.includes(userId)
-        ? prev.selectedUserIds.filter(id => id !== userId)
-        : [...prev.selectedUserIds, userId]
+        ? prev.selectedUserIds.filter((id) => id !== userId)
+        : [...prev.selectedUserIds, userId],
     }));
   };
 
@@ -159,7 +176,10 @@ const ManageGroups = () => {
       {/* Groups Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredGroups.map((group) => (
-          <div key={group.id} className="bg-white overflow-hidden shadow rounded-lg">
+          <div
+            key={group.id}
+            className="bg-white overflow-hidden shadow rounded-lg"
+          >
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -181,7 +201,8 @@ const ManageGroups = () => {
                   <div className="flex items-center">
                     <Users className="h-4 w-4 text-gray-400 mr-1" />
                     <span className="text-sm text-gray-500">
-                      {group.member_count} member{group.member_count !== 1 ? 's' : ''}
+                      {group.member_count} member
+                      {group.member_count !== 1 ? "s" : ""}
                     </span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -226,9 +247,13 @@ const ManageGroups = () => {
       {filteredGroups.length === 0 && (
         <div className="text-center py-8">
           <FolderPlus className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No groups found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No groups found
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {search ? "Try adjusting your search terms." : "Get started by creating a new group."}
+            {search
+              ? "Try adjusting your search terms."
+              : "Get started by creating a new group."}
           </p>
         </div>
       )}
@@ -240,7 +265,9 @@ const ManageGroups = () => {
             <h3 className="text-lg font-bold text-gray-900 mb-4">
               {showCreateModal ? "Create New Group" : "Edit Group"}
             </h3>
-            <form onSubmit={showCreateModal ? handleCreateGroup : handleUpdateGroup}>
+            <form
+              onSubmit={showCreateModal ? handleCreateGroup : handleUpdateGroup}
+            >
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Group Name
@@ -249,18 +276,23 @@ const ManageGroups = () => {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Members
                 </label>
                 <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
                   {(users || []).map((user) => (
-                    <label key={user.id} className="flex items-center space-x-2 p-1">
+                    <label
+                      key={user.id}
+                      className="flex items-center space-x-2 p-1"
+                    >
                       <input
                         type="checkbox"
                         checked={formData.selectedUserIds.includes(user.id)}
@@ -305,26 +337,40 @@ const ManageGroups = () => {
       {selectedGroup && !showEditModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Group Details</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Group Details
+            </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Name
+                </label>
                 <p className="text-sm text-gray-900">{selectedGroup.name}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Total Expenses</label>
-                <p className="text-sm text-gray-900">${selectedGroup.total_expenses.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Total Expenses
+                </label>
+                <p className="text-sm text-gray-900">
+                  ${selectedGroup.total_expenses.toFixed(2)}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Members</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Members
+                </label>
                 <div className="space-y-1">
                   {(selectedGroup.users || []).map((user) => (
-                    <p key={user.id} className="text-sm text-gray-900">{user.name}</p>
+                    <p key={user.id} className="text-sm text-gray-900">
+                      {user.name}
+                    </p>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Created</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Created
+                </label>
                 <p className="text-sm text-gray-900">
                   {new Date(selectedGroup.created_at).toLocaleDateString()}
                 </p>

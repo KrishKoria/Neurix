@@ -30,7 +30,7 @@ const Settlements = () => {
       setLoading(true);
       const groupsData = await apiService.getAllGroups();
       setGroups(groupsData);
-      
+
       if (groupsData.length > 0) {
         setSelectedGroup(groupsData[0].id);
       }
@@ -66,7 +66,9 @@ const Settlements = () => {
     <div className="p-6">
       <div className="flex items-center space-x-2 mb-6">
         <ArrowRightLeft className="h-6 w-6 text-blue-500" />
-        <h1 className="text-2xl font-bold text-gray-900">Settlement Suggestions</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Settlement Suggestions
+        </h1>
       </div>
 
       {/* Group Selection */}
@@ -102,7 +104,9 @@ const Settlements = () => {
           {loadingSettlements ? (
             <div className="p-6 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Loading settlements...</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Loading settlements...
+              </p>
             </div>
           ) : settlements.length > 0 ? (
             <div className="divide-y divide-gray-200">
@@ -121,9 +125,7 @@ const Settlements = () => {
                         <div className="text-sm font-medium text-gray-900">
                           {settlement.from_user}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Owes money
-                        </div>
+                        <div className="text-xs text-gray-500">Owes money</div>
                       </div>
                     </div>
 
@@ -157,7 +159,8 @@ const Settlements = () => {
 
                   <div className="mt-3 text-xs text-gray-500 text-center">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      {settlement.from_user} → {settlement.to_user}: ${settlement.amount.toFixed(2)}
+                      {settlement.from_user} → {settlement.to_user}: $
+                      {settlement.amount.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -182,8 +185,14 @@ const Settlements = () => {
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   {settlements.map((settlement, index) => (
                     <li key={index}>
-                      <span className="font-medium">{settlement.from_user}</span> pays{" "}
-                      <span className="font-medium">${settlement.amount.toFixed(2)}</span> to{" "}
+                      <span className="font-medium">
+                        {settlement.from_user}
+                      </span>{" "}
+                      pays{" "}
+                      <span className="font-medium">
+                        ${settlement.amount.toFixed(2)}
+                      </span>{" "}
+                      to{" "}
                       <span className="font-medium">{settlement.to_user}</span>
                     </li>
                   ))}
@@ -197,7 +206,9 @@ const Settlements = () => {
       {!selectedGroup && groups.length === 0 && (
         <div className="text-center py-8">
           <ArrowRightLeft className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No groups available</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No groups available
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
             Create a group and add expenses first to see settlement suggestions.
           </p>

@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { apiService, type Group, type GroupSummary, type Expense, type User } from "../lib/api";
-import { Receipt, Search, Edit, Trash2, Plus, Eye, DollarSign } from "lucide-react";
+import {
+  apiService,
+  type Group,
+  type GroupSummary,
+  type Expense,
+  type User,
+} from "../lib/api";
+import {
+  Receipt,
+  Search,
+  Edit,
+  Trash2,
+  Plus,
+  Eye,
+  DollarSign,
+} from "lucide-react";
 
 const ManageExpenses = () => {
   const [groups, setGroups] = useState<GroupSummary[]>([]);
@@ -26,11 +40,11 @@ const ManageExpenses = () => {
       setLoading(true);
       const [groupsData, usersData] = await Promise.all([
         apiService.getAllGroups(),
-        apiService.getUsers()
+        apiService.getUsers(),
       ]);
       setGroups(groupsData);
       setUsers(usersData);
-      
+
       if (groupsData.length > 0) {
         setSelectedGroup(groupsData[0].id);
       }
@@ -53,7 +67,7 @@ const ManageExpenses = () => {
 
   const handleDeleteExpense = async (expenseId: number) => {
     if (!confirm("Are you sure you want to delete this expense?")) return;
-    
+
     try {
       await apiService.deleteExpense(expenseId);
       if (selectedGroup) {
@@ -65,13 +79,14 @@ const ManageExpenses = () => {
   };
 
   const getUserName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     return user ? user.name : `User ${userId}`;
   };
 
-  const filteredExpenses = (expenses || []).filter((expense) =>
-    expense.description.toLowerCase().includes(search.toLowerCase()) ||
-    expense.paid_by_name.toLowerCase().includes(search.toLowerCase())
+  const filteredExpenses = (expenses || []).filter(
+    (expense) =>
+      expense.description.toLowerCase().includes(search.toLowerCase()) ||
+      expense.paid_by_name.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -146,7 +161,7 @@ const ManageExpenses = () => {
                           Paid by: {expense.paid_by_name}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {new Date(expense.created_at).toLocaleDateString()} • 
+                          {new Date(expense.created_at).toLocaleDateString()} •
                           Split: {expense.split_type}
                         </div>
                       </div>
@@ -157,7 +172,8 @@ const ManageExpenses = () => {
                           ${expense.amount.toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {(expense.splits || []).length} split{(expense.splits || []).length !== 1 ? 's' : ''}
+                          {(expense.splits || []).length} split
+                          {(expense.splits || []).length !== 1 ? "s" : ""}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -186,9 +202,13 @@ const ManageExpenses = () => {
           {filteredExpenses.length === 0 && (
             <div className="text-center py-8">
               <Receipt className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No expenses found</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No expenses found
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {search ? "Try adjusting your search terms." : "No expenses have been added to this group yet."}
+                {search
+                  ? "Try adjusting your search terms."
+                  : "No expenses have been added to this group yet."}
               </p>
             </div>
           )}
@@ -198,7 +218,9 @@ const ManageExpenses = () => {
       {!selectedGroup && groups.length === 0 && (
         <div className="text-center py-8">
           <Receipt className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No groups available</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No groups available
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
             Create a group first before managing expenses.
           </p>
@@ -209,30 +231,52 @@ const ManageExpenses = () => {
       {selectedExpense && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Expense Details</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Expense Details
+            </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <p className="text-sm text-gray-900">{selectedExpense.description}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedExpense.description}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount</label>
-                <p className="text-sm text-gray-900">${selectedExpense.amount.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Amount
+                </label>
+                <p className="text-sm text-gray-900">
+                  ${selectedExpense.amount.toFixed(2)}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Paid By</label>
-                <p className="text-sm text-gray-900">{selectedExpense.paid_by_name}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Paid By
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedExpense.paid_by_name}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Split Type</label>
-                <p className="text-sm text-gray-900">{selectedExpense.split_type}</p>
+                <label className="block text-sm font-medium text-gray-700">
+                  Split Type
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedExpense.split_type}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Splits</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Splits
+                </label>
                 <div className="space-y-1">
                   {(selectedExpense.splits || []).map((split, index) => (
                     <div key={index} className="flex justify-between">
-                      <span className="text-sm text-gray-900">{split.user_name}</span>
+                      <span className="text-sm text-gray-900">
+                        {split.user_name}
+                      </span>
                       <span className="text-sm text-gray-900">
                         ${split.amount.toFixed(2)}
                         {split.percentage && ` (${split.percentage}%)`}
@@ -242,7 +286,9 @@ const ManageExpenses = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Created</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Created
+                </label>
                 <p className="text-sm text-gray-900">
                   {new Date(selectedExpense.created_at).toLocaleDateString()}
                 </p>

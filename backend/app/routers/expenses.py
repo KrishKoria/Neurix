@@ -35,6 +35,21 @@ def create_expense(
     return expense_service.create_expense(db, group_id, expense_data)
 
 
+@router.get("/expenses/statistics", summary="Get expense statistics")
+def get_expense_statistics(
+    group_id: Optional[int] = Query(None, description="Group ID for group-specific statistics"),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get expense statistics for a group or system-wide.
+    
+    - **group_id**: Optional group ID. If not provided, returns system-wide statistics.
+    
+    Returns statistics including total expenses, total amount, averages, min/max amounts.
+    """
+    return expense_service.get_expense_statistics(db, group_id)
+
+
 @router.get("/expenses/{expense_id}", response_model=ExpenseResponse, summary="Get expense by ID")
 def get_expense(
     expense_id: int,
@@ -100,18 +115,3 @@ def delete_expense(
     """
     result = expense_service.delete_expense(db, expense_id)
     return MessageResponse(message=result["message"])
-
-
-@router.get("/expenses/statistics", summary="Get expense statistics")
-def get_expense_statistics(
-    group_id: Optional[int] = Query(None, description="Group ID for group-specific statistics"),
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    Get expense statistics for a group or system-wide.
-    
-    - **group_id**: Optional group ID. If not provided, returns system-wide statistics.
-    
-    Returns statistics including total expenses, total amount, averages, min/max amounts.
-    """
-    return expense_service.get_expense_statistics(db, group_id)

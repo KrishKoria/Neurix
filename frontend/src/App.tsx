@@ -6,18 +6,18 @@ import {
   Link,
   useLocation,
 } from "react-router-dom";
-import { 
-  Users, 
-  PlusCircle, 
-  DollarSign, 
-  BarChart3, 
-  Home, 
-  Settings, 
+import {
+  Users,
+  PlusCircle,
+  DollarSign,
+  BarChart3,
+  Home,
+  Settings,
   ArrowRightLeft,
   Receipt,
   TrendingUp,
   UserCog,
-  FolderOpen
+  FolderOpen,
 } from "lucide-react";
 import { apiService } from "./lib/api";
 import Dashboard from "./components/Dashboard";
